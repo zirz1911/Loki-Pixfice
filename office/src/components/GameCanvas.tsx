@@ -20,11 +20,20 @@ const FRAME_W = 16, FRAME_H = 24, SCALE = 3;
 const SPW = FRAME_W * SCALE;   // 48
 const SPH = FRAME_H * SCALE;   // 72
 
+// Direction enum (matches pixel-agents: DOWN=0, UP=1, LEFT=2, RIGHT=3)
 const DIR_DOWN = 0, DIR_UP = 1, DIR_LEFT = 2, DIR_RIGHT = 3;
-// Sprite sheet row per direction (Row0=south, Row1=west, Row2=east, Row3=north)
-const SPRITE_ROW = [0, 3, 1, 2];  // [DOWN→0, UP→3, LEFT→1, RIGHT→2]
 
-const WALK_COL = 0, TYPE_COL = 4, IDLE_COL = 6;
+// Sprite sheet rows: row0=down, row1=up, row2=right, row3=left
+// Direction enum values don't match row indices directly — map here:
+const SPRITE_ROW = [0, 1, 3, 2];  // [DOWN→row0, UP→row1, LEFT→row3, RIGHT→row2]
+
+// Walk animation sequence: pixel-agents uses [0,1,2,1] (not 0,1,2,3)
+// — middle frame repeated creates smooth pendulum walk cycle
+const WALK_CYCLE = [0, 1, 2, 1] as const;
+
+const WALK_COL = 0, TYPE_COL = 4;
+// Idle = walk frame index 1 (neutral standing pose, per pixel-agents)
+const IDLE_FRAME = 1;
 const WALK_FRAMES = 4, TYPE_FRAMES = 2;
 
 const AGENT_SPRITE: Record<string, number> = { odin:0, thor:1, loki:2, heimdall:3, tyr:4, ymir:5 };
@@ -64,7 +73,9 @@ const CHAIR_W  = 22, CHAIR_H = 14;
 const SIT_DY   = -45;
 
 const WALK_SPD = 1.5, WANDER_MIN = 60, WANDER_MAX = 190;
-const WALK_TICKS = 4, TYPE_TICKS = 6;
+// pixel-agents timing: walk=150ms/frame, type=300ms/frame
+// at 12fps (83ms/tick): WALK_TICKS=2→167ms, TYPE_TICKS=4→333ms
+const WALK_TICKS = 2, TYPE_TICKS = 4;
 const INTERVAL = 1000 / 12;
 
 // ── Section themes (accent + label only) ──────────────────────────────────────
@@ -589,11 +600,18 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
             ax = arrived ? homeX : Math.round(ent.x);
             ay = arrived ? homeY : Math.round(ent.y);
             dir = arrived ? DIR_DOWN : ent.dir;
-            col = arrived ? TYPE_COL + ent.typeFrame : WALK_COL + ent.walkFrame;
+            // Arrived: type animation. Walking to desk: WALK_CYCLE sequence
+            col = arrived
+              ? TYPE_COL + ent.typeFrame
+              : WALK_COL + WALK_CYCLE[ent.walkFrame % 4];
           } else {
             ax = Math.round(ent.x); ay = Math.round(ent.y);
             const moving = Math.hypot(ent.tx - ent.x, ent.ty - ent.y) > 1.5;
-            dir = ent.dir; col = moving ? WALK_COL + ent.walkFrame : IDLE_COL;
+            dir = ent.dir;
+            // Moving: WALK_CYCLE sequence. Idle: neutral stand (walk frame 1)
+            col = moving
+              ? WALK_COL + WALK_CYCLE[ent.walkFrame % 4]
+              : WALK_COL + IDLE_FRAME;
           }
 
           const _ax = ax, _ay = ay, _dir = dir, _col = col;
