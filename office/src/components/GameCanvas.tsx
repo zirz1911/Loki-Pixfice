@@ -3,8 +3,8 @@
  *
  * Sprites: char_0–5.png  (112×96px, 7 cols × 4 rows, frame=16×24)
  *   Col 0–3 walk  Col 4–5 typing  Col 6 idle
- *   Sprite sheet row order: Row 0=SOUTH(down)  Row 1=WEST(left)  Row 2=EAST(right)  Row 3=NORTH(up)
- *   → SPRITE_ROW maps game direction enum to sprite sheet row
+ *   Sprite sheet row order: Row 0=DOWN  Row 1=UP  Row 2=LEFT  Row 3=RIGHT
+ *   → SPRITE_ROW[gameDir] = spriteRow (identity mapping: our DIR enum == row index)
  *
  * Furniture layout stored in localStorage, drag-and-drop edit mode.
  */
@@ -15,51 +15,84 @@ import {
   ITEM_W, ITEM_H, loadLayout, saveLayout, generateDefaultSection,
 } from "../lib/officeLayout";
 
-// ── Sprite constants ───────────────────────────────────────────────────────────
-const FRAME_W = 16, FRAME_H = 24, SCALE = 3;
-const SPW = FRAME_W * SCALE;   // 48
-const SPH = FRAME_H * SCALE;   // 72
+// ── Sprite constants (canvas-drawn characters) ────────────────────────────────
+const PS  = 3;           // pixel scale
+const SPW = 16 * PS;     // 48px wide
+const SPH = 19 * PS;     // 57px tall (14 body rows + 5 leg rows)
 
-// Direction enum (matches pixel-agents: DOWN=0, UP=1, LEFT=2, RIGHT=3)
+// Direction enum (movement only — no sprite rows needed)
 const DIR_DOWN = 0, DIR_UP = 1, DIR_LEFT = 2, DIR_RIGHT = 3;
 
-// Sprite sheet rows: row0=down, row1=up, row2=right, row3=left
-// Direction enum values don't match row indices directly — map here:
-const SPRITE_ROW = [0, 1, 3, 2];  // [DOWN→row0, UP→row1, LEFT→row3, RIGHT→row2]
-
-// Walk animation sequence: pixel-agents uses [0,1,2,1] (not 0,1,2,3)
-// — middle frame repeated creates smooth pendulum walk cycle
-const WALK_CYCLE = [0, 1, 2, 1] as const;
-
-const WALK_COL = 0, TYPE_COL = 4;
-// Idle = walk frame index 1 (neutral standing pose, per pixel-agents)
-const IDLE_FRAME = 1;
 const WALK_FRAMES = 4, TYPE_FRAMES = 2;
 
-const AGENT_SPRITE: Record<string, number> = { odin:0, thor:1, loki:2, heimdall:3, tyr:4, ymir:5 };
-function spriteIdx(name: string): number {
-  const k = name.toLowerCase().replace(/-oracle$/, '');
-  if (AGENT_SPRITE[k] !== undefined) return AGENT_SPRITE[k];
-  let h = 0; for (const c of k) h = ((h << 5) - h + c.charCodeAt(0)) | 0;
-  return Math.abs(h) % 6;
-}
+// Body pixel grid (14 rows × 16 cols)
+const SPRITE_TOP = [
+  '0000HHHHHHHH0000',
+  '000HHHHHHHHHH000',
+  '000HSSSSSSSSSH00',
+  '00HSSSSSSSSSSSH0',
+  '00HSEPPSEPSSSH00',
+  '00HSSSSSSSSSSSH0',
+  '00HSSSMWWMSSSH00',
+  '00HSSSSSSSSSH000',
+  '000SSSSSSSS00000',
+  '00CCCSSSSCCC0000',
+  '0CCCCCCCCCCCCC00',
+  '1CCCCCCCCCCCCC00',
+  '0CAAACCCCAAACCC0',
+  '0CCCCCCCCCCCCC00',
+];
+// Leg frames: [0]=stand  [1]=walkA  [2]=walkB
+const LEGS: string[][] = [
+  ['00LLLLCCCLLLL000','000LLLL0LLLLL000','000LLLL0LLLLL000','000BBBB0BBBBB000','00BBBBB00BBBBB00'],
+  ['00LLLLCCCLLLL000','00LLLLL0LLLLL000','00LLLLL00LLLL000','00BBBBB00BBBB000','0BBBBBB000BBBBB0'],
+  ['00LLLLCCCLLLL000','000LLLL0LLLLLL00','0000LLLL0LLLLL00','0000BBBB0BBBBB00','00BBBBB000BBBBBB'],
+];
 
-const IMAGES = new Map<number, HTMLImageElement>();
-let _imgsLoaded = false;
-function preloadImages() {
-  if (_imgsLoaded) return; _imgsLoaded = true;
-  const base = import.meta.env.BASE_URL ?? '/office/';
-  for (let i = 0; i < 6; i++) {
-    const img = new Image();
-    img.src = `${base}assets/characters/char_${i}.png`;
-    IMAGES.set(i, img);
-  }
+interface Pal { H:string;S:string;E:string;P:string;M:string;W:string;C:string;A:string;L:string;B:string }
+const PALETTES: Record<string, Pal> = {
+  default:  { H:'#6b3a2a',S:'#fde2c8',E:'#fff',P:'#2c1b0e',M:'#6b3030',W:'#e0c08a',C:'#4a7a2c',A:'#6aaa4c',L:'#4060a0',B:'#2a3070' },
+  odin:     { H:'#c8a830',S:'#d4956b',E:'#fff',P:'#1a1008',M:'#603020',W:'#e0c080',C:'#1e1040',A:'#f5c518',L:'#2c1848',B:'#180830' },
+  thor:     { H:'#d4b050',S:'#fde2c8',E:'#fff',P:'#1a1040',M:'#503020',W:'#fae8c8',C:'#2050a8',A:'#4fc3f7',L:'#183080',B:'#102060' },
+  loki:     { H:'#1a0a30',S:'#c88060',E:'#fff',P:'#3a1060',M:'#501840',W:'#d0a0b0',C:'#5a2080',A:'#c060e0',L:'#3a1060',B:'#200840' },
+  heimdall: { H:'#d4c080',S:'#fde2c8',E:'#fff',P:'#103830',M:'#305040',W:'#e8f0e8',C:'#1a6858',A:'#40d0b0',L:'#0e3838',B:'#082828' },
+  tyr:      { H:'#802020',S:'#fde2c8',E:'#fff',P:'#401010',M:'#601010',W:'#f0d0d0',C:'#802020',A:'#ff6060',L:'#601010',B:'#400808' },
+  ymir:     { H:'#a0c0d8',S:'#c0d8f0',E:'#90b8d0',P:'#304858',M:'#4a6878',W:'#d0e8f8',C:'#4878a0',A:'#90d0f8',L:'#305070',B:'#203040' },
+};
+function getPalette(name: string): Pal {
+  const key = name.toLowerCase().replace(/-oracle$/, '');
+  const pk = Object.keys(PALETTES).find(k => k !== 'default' && key.startsWith(k)) ?? 'default';
+  return PALETTES[pk];
 }
-function drawCharSprite(ctx: CanvasRenderingContext2D, dx: number, dy: number, name: string, dir: number, col: number) {
-  const img = IMAGES.get(spriteIdx(name));
-  if (!img?.complete || !img.naturalWidth) return;
-  const row = SPRITE_ROW[dir] ?? 0;  // map game direction to sprite sheet row
-  ctx.drawImage(img, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H, Math.round(dx), Math.round(dy), SPW, SPH);
+const LEG_CYCLE = [0, 1, 2, 1] as const;
+
+function drawAgent(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number,
+  name: string,
+  legFrame: number,
+  facingRight: boolean,
+) {
+  const pal = getPalette(name);
+  const rows = [...SPRITE_TOP, ...LEGS[legFrame]];
+  const cmap: Record<string, string> = {
+    H:pal.H, S:pal.S, E:pal.E, P:pal.P, M:pal.M,
+    W:pal.W, C:pal.C, A:pal.A, L:pal.L, B:pal.B, '1':pal.C,
+  };
+  ctx.save();
+  if (!facingRight) { ctx.translate(x + SPW, y); ctx.scale(-1, 1); x = 0; }
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    for (let c = 0; c < row.length; c++) {
+      const ch = row[c];
+      if (ch === '0') continue;
+      const color = cmap[ch];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(x + c * PS, y + r * PS, PS, PS);
+    }
+  }
+  ctx.restore();
 }
 
 // ── Layout constants ───────────────────────────────────────────────────────────
@@ -69,8 +102,8 @@ const WALL_T   = 10;
 const DESK_W   = 56, DESK_H = 28;
 const CHAIR_W  = 22, CHAIR_H = 14;
 // SIT_DY: sprite top offset from desk.y when sitting
-// Need: desk.y + SIT_DY + SPH < desk.y + DESK_H + 1  →  SIT_DY < DESK_H+1−SPH = 29−72 = −43
-const SIT_DY   = -45;
+// Need: desk.y + SIT_DY + SPH < desk.y + DESK_H + 1  →  SIT_DY < DESK_H+1−SPH = 29−57 = −28
+const SIT_DY   = -30;
 
 const WALK_SPD = 1.5, WANDER_MIN = 60, WANDER_MAX = 190;
 // pixel-agents timing: walk=150ms/frame, type=300ms/frame
@@ -278,7 +311,7 @@ function computeSections(w: number, h: number, sessions: Session[]): Section[] {
 // ── Entity state ───────────────────────────────────────────────────────────────
 interface Entity {
   x: number; y: number; tx: number; ty: number;
-  dir: number; walkFrame: number; typeFrame: number;
+  dir: number; facingRight: boolean; walkFrame: number; typeFrame: number;
   frameTimer: number; wanderTimer: number;
   zone: { x: number; y: number; w: number; h: number };
   homeX: number; homeY: number;
@@ -378,7 +411,7 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
         const sy = sec.wanderZone.y + Math.random() * Math.max(0, sec.wanderZone.h - SPH);
         ents.set(ag.target, {
           x: sx, y: sy, tx: sx, ty: sy,
-          dir: DIR_DOWN, walkFrame: 0, typeFrame: 0, frameTimer: 0,
+          dir: DIR_DOWN, facingRight: true, walkFrame: 0, typeFrame: 0, frameTimer: 0,
           wanderTimer: Math.floor(Math.random() * WANDER_MAX),
           zone: sec.wanderZone, homeX, homeY,
         });
@@ -494,7 +527,6 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
 
   // ── Main loop ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    preloadImages();
     const canvas = canvasRef.current; if (!canvas) return;
     const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     resize();
@@ -594,27 +626,21 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
           const homeX = desk ? desk.x + Math.floor((ITEM_W.desk - SPW) / 2) : ent.zone.x;
           const homeY = desk ? desk.y + SIT_DY : ent.zone.y;
 
-          let ax: number, ay: number, dir: number, col: number;
+          let ax: number, ay: number, legFrame: number, facingRight: boolean;
           if (busy) {
             const arrived = Math.hypot(homeX - ent.x, homeY - ent.y) < 3;
             ax = arrived ? homeX : Math.round(ent.x);
             ay = arrived ? homeY : Math.round(ent.y);
-            dir = arrived ? DIR_DOWN : ent.dir;
-            // Arrived: type animation. Walking to desk: WALK_CYCLE sequence
-            col = arrived
-              ? TYPE_COL + ent.typeFrame
-              : WALK_COL + WALK_CYCLE[ent.walkFrame % 4];
+            facingRight = arrived ? true : ent.facingRight;
+            legFrame = arrived ? 0 : LEG_CYCLE[ent.walkFrame % 4];
           } else {
             ax = Math.round(ent.x); ay = Math.round(ent.y);
             const moving = Math.hypot(ent.tx - ent.x, ent.ty - ent.y) > 1.5;
-            dir = ent.dir;
-            // Moving: WALK_CYCLE sequence. Idle: neutral stand (walk frame 1)
-            col = moving
-              ? WALK_COL + WALK_CYCLE[ent.walkFrame % 4]
-              : WALK_COL + IDLE_FRAME;
+            facingRight = ent.facingRight;
+            legFrame = moving ? LEG_CYCLE[ent.walkFrame % 4] : 0;
           }
 
-          const _ax = ax, _ay = ay, _dir = dir, _col = col;
+          const _ax = ax, _ay = ay, _legFrame = legFrame, _facingRight = facingRight;
           items.push({
             zY: ay + SPH, pri: 1,
             draw: () => {
@@ -637,7 +663,11 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
                 ctx.textAlign = 'center'; ctx.fillText(dots, _ax + SPW / 2, _ay - 4);
                 ctx.restore();
               }
-              drawCharSprite(ctx, _ax, _ay, ag.name, _dir, _col);
+              // Status dot
+              const dotColor = ag.status === 'busy' ? '#fdd835' : ag.status === 'ready' ? '#5ac88c' : '#445566';
+              ctx.fillStyle = dotColor;
+              ctx.fillRect(_ax + 14 * PS, _ay, PS * 2, PS * 2);
+              drawAgent(ctx, _ax, _ay, ag.name, _legFrame, _facingRight);
             },
           });
 
@@ -756,6 +786,7 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
               ent.y = Math.max(ent.zone.y, Math.min(ent.zone.y + ent.zone.h - SPH, ent.y));
             }
             ent.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? DIR_RIGHT : DIR_LEFT) : (dy > 0 ? DIR_DOWN : DIR_UP);
+            if (Math.abs(dx) > 0.5) ent.facingRight = dx > 0;
             ent.frameTimer++;
             if (ent.frameTimer >= WALK_TICKS) { ent.frameTimer = 0; ent.walkFrame = (ent.walkFrame + 1) % WALK_FRAMES; }
           } else {
