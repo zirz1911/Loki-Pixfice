@@ -1,0 +1,31 @@
+{
+  "name": "loki-office",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "loki-office": "./src/cli.ts"
+  },
+  "scripts": {
+    "build:office": "cd office && bunx vite build",
+    "dev": "pm2 start ecosystem.config.cjs && echo '→ loki-office backend (watch src/) on :3456\n→ loki-office-dev vite HMR on :5173\n→ pm2 logs to follow'",
+    "dev:office": "cd office && bunx vite",
+    "dev:stop": "pm2 delete loki-office loki-office-dev 2>/dev/null; echo '→ dev stopped'",
+    "deploy": "bun install && bun run build:office && pm2 delete loki-office-dev 2>/dev/null; pm2 restart loki-office"
+  },
+  "description": "Loki Office — Multi-Agent Workflow UI for Loki-Oracle. tmux orchestra control. CLI + Web UI.",
+  "dependencies": {
+    "hono": "^4.12.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.183.1",
+    "@vitejs/plugin-react": "^4.3.0",
+    "tailwindcss": "^4.2.1",
+    "vite": "^6.0.0"
+  }
+}
