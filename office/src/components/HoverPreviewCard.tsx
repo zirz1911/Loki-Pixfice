@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { ansiToHtml } from "../lib/ansi";
-import { agentColor } from "../lib/constants";
+import { AgentAvatar } from "./AgentAvatar";
 import type { AgentState } from "../lib/types";
 
 interface HoverPreviewCardProps {
@@ -16,13 +16,7 @@ interface HoverPreviewCardProps {
 const STATUS_COLORS: Record<string, string> = {
   busy: "#fdd835",
   ready: "#4caf50",
-  idle: "#666",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  busy: "BUSY",
-  ready: "READY",
-  idle: "IDLE",
+  idle: "#445566",
 };
 
 function trimCapture(raw: string): string {
@@ -48,37 +42,28 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
   const [inputBuf, setInputBuf] = useState("");
   const termRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const color = agentColor(agent.name);
-  const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ");
-  const statusColor = STATUS_COLORS[agent.status] || "#666";
+  const streamingRef = useRef(false);
 
-  // Auto-focus input when pinned (double-tap focus for mobile keyboard)
+  const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ").toUpperCase();
+  const statusColor = STATUS_COLORS[agent.status] ?? "#445566";
+
+  // Auto-focus when pinned
   useEffect(() => {
     if (pinned) {
       inputRef.current?.focus();
-      const t = setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.click();
-      }, 50);
+      const t = setTimeout(() => { inputRef.current?.focus(); inputRef.current?.click(); }, 50);
       return () => clearTimeout(t);
     }
   }, [pinned, agent.target]);
 
-  // Slash streaming: track whether we're in streaming mode
-  const streamingRef = useRef(false);
-
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onClose?.(); return; }
-    // F11 or Cmd+Enter for fullscreen
     if (e.key === "F11" || (e.key === "Enter" && (e.metaKey || e.ctrlKey))) {
-      e.preventDefault();
-      onFullscreen?.();
-      return;
+      e.preventDefault(); onFullscreen?.(); return;
     }
     if (e.key === "Enter") {
       e.preventDefault();
       if (streamingRef.current) {
-        // In streaming mode: just send Enter, chars already sent
         send?.({ type: "send", target: agent.target, text: "\r" });
         streamingRef.current = false;
       } else if (inputBuf && send) {
@@ -87,40 +72,22 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
       setInputBuf("");
       return;
     }
-    // Backspace in streaming mode: send to tmux
     if (e.key === "Backspace" && streamingRef.current && send) {
       send({ type: "send", target: agent.target, text: "\b" });
-      return; // let default input handling remove the char
     }
   }, [inputBuf, agent.target, send, onClose, onFullscreen]);
 
-  // Stream chars to tmux when input starts with /
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     const prev = inputBuf;
     setInputBuf(val);
-
     if (!send) return;
-
-    // Entering slash mode: first / typed
-    if (val === "/" && prev === "") {
-      streamingRef.current = true;
-      send({ type: "send", target: agent.target, text: "/" });
-      return;
-    }
-
-    // In streaming mode: send new chars
+    if (val === "/" && prev === "") { streamingRef.current = true; send({ type: "send", target: agent.target, text: "/" }); return; }
     if (streamingRef.current && val.length > prev.length) {
       const newChars = val.slice(prev.length);
-      for (const ch of newChars) {
-        send({ type: "send", target: agent.target, text: ch });
-      }
+      for (const ch of newChars) send({ type: "send", target: agent.target, text: ch });
     }
-
-    // Left streaming mode (user cleared or removed /)
-    if (streamingRef.current && !val.startsWith("/")) {
-      streamingRef.current = false;
-    }
+    if (streamingRef.current && !val.startsWith("/")) streamingRef.current = false;
   }, [inputBuf, agent.target, send]);
 
   // Poll terminal capture
@@ -138,27 +105,25 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
     return () => { active = false; };
   }, [agent.target]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     const el = termRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [content]);
 
-  // Deterministic chibi features (same logic as AgentAvatar)
-  let h = 0;
-  for (let i = 0; i < agent.name.length; i++) h = ((h << 5) - h + agent.name.charCodeAt(i)) | 0;
-  const hasEars = Math.abs(h) % 3 === 0;
-  const hasAntenna = !hasEars && Math.abs(h) % 3 === 1;
-  const eyeStyle = Math.abs(h >> 4) % 3;
-
   return (
     <div
-      className="flex flex-col overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
       style={{
-        background: "#0a0a0f",
-        width: 420,
+        width: 400,
         height: "calc(100vh - 120px)",
-        maxHeight: 700,
+        maxHeight: 680,
+        background: "#07080f",
+        border: `2px solid ${accent}`,
+        boxShadow: `0 0 20px ${accent}25, 6px 6px 0 #000`,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        fontFamily: "'Press Start 2P', monospace",
+        imageRendering: "pixelated",
       }}
       onMouseDown={(e) => {
         if (pinned && e.target !== inputRef.current) {
@@ -167,278 +132,213 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
         }
       }}
     >
-      {/* Header with big avatar */}
-      <div
-        className="relative flex flex-col items-center pt-6 pb-4 px-4"
-        style={{
-          background: `linear-gradient(180deg, ${accent}15 0%, transparent 100%)`,
-          borderBottom: `1px solid ${accent}20`,
-        }}
-      >
-        {/* Big chibi SVG avatar */}
-        <svg width={100} height={90} viewBox="-40 -45 80 80">
-          {/* Aura */}
-          {agent.status === "busy" && (
-            <>
-              <circle cx={0} cy={-6} r={36} fill={statusColor} opacity={0.08}
-                style={{ animation: "saiyan-aura 2s ease-in-out infinite" }} />
-              <circle cx={0} cy={-6} r={42} fill="none" stroke={statusColor} strokeWidth={2}
-                opacity={0.15} style={{ animation: "saiyan-outer 2s ease-in-out infinite" }} />
-            </>
-          )}
-          {agent.status === "ready" && (
-            <circle cx={0} cy={-6} r={28} fill={statusColor} opacity={0.08} />
-          )}
-
-          {/* Ground shadow */}
-          <ellipse cx={0} cy={24} rx={16} ry={4}
-            fill={agent.status === "idle" ? "#333" : statusColor}
-            opacity={agent.status === "idle" ? 0.3 : 0.2} />
-
-          {/* Body */}
-          <rect x={-12} y={6} width={24} height={18} rx={8}
-            fill={color} stroke="#fff" strokeWidth={1.5} opacity={0.9} />
-          <rect x={-6} y={14} width={12} height={5} rx={2} fill="#000" opacity={0.12} />
-
-          {/* Head */}
-          <circle cx={0} cy={-10} r={20} fill={color} stroke="#fff" strokeWidth={2} />
-
-          {/* Hair */}
-          <ellipse cx={-4} cy={-28} rx={6} ry={4} fill={color} stroke="#fff" strokeWidth={1} />
-          <ellipse cx={4} cy={-29} rx={5} ry={3} fill={color} stroke="#fff" strokeWidth={1} />
-
-          {/* Cat ears */}
-          {hasEars && (
-            <>
-              <polygon points="-14,-24 -18,-36 -6,-28" fill={color} stroke="#fff" strokeWidth={1.5} />
-              <polygon points="14,-24 18,-36 6,-28" fill={color} stroke="#fff" strokeWidth={1.5} />
-              <polygon points="-13,-25 -16,-33 -8,-27" fill="#ffb4b4" opacity={0.4} />
-              <polygon points="13,-25 16,-33 8,-27" fill="#ffb4b4" opacity={0.4} />
-            </>
-          )}
-
-          {/* Antenna */}
-          {hasAntenna && (
-            <>
-              <line x1={0} y1={-30} x2={0} y2={-40} stroke="#888" strokeWidth={1.5} />
-              <circle cx={0} cy={-42} r={3} fill={statusColor} />
-            </>
-          )}
-
-          {/* Eyes */}
-          {eyeStyle === 0 && (
-            <>
-              <circle cx={-7} cy={-12} r={4.5} fill="#fff" />
-              <circle cx={7} cy={-12} r={4.5} fill="#fff" />
-              <circle cx={-6} cy={-12} r={2.5} fill="#222" />
-              <circle cx={8} cy={-12} r={2.5} fill="#222" />
-              <circle cx={-5} cy={-13.5} r={1} fill="#fff" />
-              <circle cx={9} cy={-13.5} r={1} fill="#fff" />
-            </>
-          )}
-          {eyeStyle === 1 && (
-            <>
-              <path d="M -10 -12 Q -7 -15 -4 -12" fill="none" stroke="#222" strokeWidth={1.8} strokeLinecap="round" />
-              <path d="M 4 -12 Q 7 -15 10 -12" fill="none" stroke="#222" strokeWidth={1.8} strokeLinecap="round" />
-            </>
-          )}
-          {eyeStyle === 2 && (
-            <>
-              <circle cx={-7} cy={-12} r={4.5} fill="#fff" />
-              <circle cx={7} cy={-12} r={4.5} fill="#fff" />
-              <text x={-7} y={-9.5} textAnchor="middle" fill={color} fontSize={7} fontWeight="bold">*</text>
-              <text x={7} y={-9.5} textAnchor="middle" fill={color} fontSize={7} fontWeight="bold">*</text>
-            </>
-          )}
-
-          {/* Blush */}
-          <ellipse cx={-12} cy={-7} rx={3} ry={2} fill="#ff9999" opacity={0.25} />
-          <ellipse cx={12} cy={-7} rx={3} ry={2} fill="#ff9999" opacity={0.25} />
-
-          {/* Mouth */}
-          {agent.status === "busy" ? (
-            <ellipse cx={0} cy={-4} rx={2.5} ry={2} fill="#333" />
-          ) : (
-            <path d="M -3 -5 Q 0 -2 3 -5" fill="none" stroke="#333" strokeWidth={1.2} strokeLinecap="round" />
-          )}
-
-          {/* Headphones */}
-          <path d="M -17 -14 Q -18 -28 0 -30 Q 18 -28 17 -14" fill="none" stroke="#555" strokeWidth={2.5} />
-          <rect x={-20} y={-18} width={6} height={10} rx={3} fill="#444" stroke="#555" strokeWidth={1} />
-          <rect x={14} y={-18} width={6} height={10} rx={3} fill="#444" stroke="#555" strokeWidth={1} />
-          <line x1={-19} y1={-10} x2={-14} y2={-2} stroke="#555" strokeWidth={1.2} />
-          <circle cx={-13} cy={-1} r={1.5} fill="#666" />
-
-          {/* Arms */}
-          {agent.status === "busy" ? (
-            <>
-              <g style={{ animation: "typing-arm 0.25s ease-in-out infinite" }}>
-                <line x1={-12} y1={10} x2={-22} y2={18} stroke={color} strokeWidth={3} strokeLinecap="round" />
-              </g>
-              <g style={{ animation: "typing-arm 0.25s ease-in-out 0.12s infinite" }}>
-                <line x1={12} y1={10} x2={22} y2={18} stroke={color} strokeWidth={3} strokeLinecap="round" />
-              </g>
-            </>
-          ) : (
-            <>
-              <line x1={-12} y1={10} x2={-16} y2={20} stroke={color} strokeWidth={3} strokeLinecap="round" />
-              <line x1={12} y1={10} x2={16} y2={20} stroke={color} strokeWidth={3} strokeLinecap="round" />
-            </>
-          )}
-
-          {/* Legs + shoes */}
-          <line x1={-5} y1={23} x2={-6} y2={28} stroke={color} strokeWidth={2.5} strokeLinecap="round" />
-          <line x1={5} y1={23} x2={6} y2={28} stroke={color} strokeWidth={2.5} strokeLinecap="round" />
-          <ellipse cx={-7} cy={29} rx={3.5} ry={2} fill="#333" />
-          <ellipse cx={7} cy={29} rx={3.5} ry={2} fill="#333" />
-        </svg>
-
-        {/* Name + status */}
-        <h2
-          className="mt-2 text-base font-bold tracking-[3px] uppercase"
-          style={{ color: accent }}
-        >
-          {displayName}
-        </h2>
-
-        <div className="flex items-center gap-3 mt-1.5">
-          <span className="flex items-center gap-1.5">
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{
-                background: statusColor,
-                boxShadow: agent.status !== "idle" ? `0 0 6px ${statusColor}` : undefined,
-              }}
-            />
-            <span className="text-[10px] font-mono" style={{ color: statusColor }}>
-              {STATUS_LABELS[agent.status]}
-            </span>
-          </span>
-          <span className="text-[10px] text-white/40 font-mono">{roomLabel}</span>
-        </div>
-
-        <span className="mt-1 text-[9px] text-white/25 font-mono">{agent.target}</span>
-      </div>
-
-      {/* Terminal header with fullscreen button */}
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.02] border-b border-white/[0.04]">
-        <span className="text-[9px] text-white/30 tracking-[2px] uppercase font-mono">Live Terminal</span>
-        <span
-          className="w-1.5 h-1.5 rounded-full ml-auto"
-          style={{
-            background: "#4caf50",
-            boxShadow: "0 0 4px #4caf50",
-            animation: "agent-pulse 2s ease-in-out infinite",
-          }}
-        />
-        {pinned && onFullscreen && (
-          <button
-            onClick={onFullscreen}
-            className="ml-1 px-2 py-0.5 rounded text-[9px] text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer font-mono transition-colors"
-            title="Fullscreen (Ctrl+Enter)"
-          >
-            ⛶
-          </button>
-        )}
+      {/* ── Header: pixel avatar + info ─────────────────────────────────── */}
+      <div style={{
+        background: `${accent}12`,
+        borderBottom: `2px solid ${accent}40`,
+        padding: "16px 16px 12px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        flexShrink: 0,
+        position: "relative",
+      }}>
+        {/* Close button */}
         {pinned && onClose && (
           <button
             onClick={onClose}
-            className="px-1.5 py-0.5 rounded text-[9px] text-white/30 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer transition-colors"
-            title="Close (Esc)"
-          >
-            ✕
-          </button>
+            style={{
+              position: "absolute", top: 8, right: 10,
+              background: "none", border: "none",
+              color: "#445566", fontSize: 18, cursor: "pointer",
+              lineHeight: 1, padding: "0 4px",
+            }}
+          >×</button>
+        )}
+
+        {/* Pixel sprite avatar (big) */}
+        <div style={{ transform: "scale(1.6)", transformOrigin: "center bottom", marginBottom: 20, marginTop: 4 }}>
+          <AgentAvatar
+            name={agent.name}
+            target={agent.target}
+            status={agent.status}
+            preview={agent.preview}
+            accent={accent}
+            onClick={() => {}}
+          />
+        </div>
+
+        {/* Agent name */}
+        <div style={{ fontSize: 11, color: accent, letterSpacing: 2, textAlign: "center" }}>
+          {displayName}
+        </div>
+
+        {/* Status + room */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{
+              width: 8, height: 8, background: statusColor,
+              animation: agent.status === "busy" ? "agent-pulse 0.8s infinite" : "none",
+            }} />
+            <span style={{ fontSize: 8, color: statusColor }}>{agent.status.toUpperCase()}</span>
+          </div>
+          <div style={{ width: 2, height: 14, background: "#1e2840" }} />
+          <span style={{ fontSize: 7, color: `${accent}80` }}>{roomLabel.toUpperCase()}</span>
+        </div>
+
+        {/* Target ID */}
+        <div style={{ fontSize: 6, color: "#2a3a50" }}>{agent.target}</div>
+      </div>
+
+      {/* ── Terminal header ──────────────────────────────────────────────── */}
+      <div style={{
+        background: "#0a0b16",
+        borderBottom: `1px solid ${accent}20`,
+        padding: "5px 10px",
+        display: "flex", alignItems: "center", gap: 6,
+        flexShrink: 0,
+      }}>
+        <div style={{ width: 6, height: 6, background: "#4caf50", animation: "pixel-glow 2s infinite" }} />
+        <span style={{ fontSize: 7, color: "#2a3a50", letterSpacing: 2 }}>LIVE TERMINAL</span>
+        <div style={{ flex: 1 }} />
+        {pinned && onFullscreen && (
+          <button
+            onClick={onFullscreen}
+            title="Fullscreen (Ctrl+Enter)"
+            style={{
+              background: "#111828", border: "1px solid #2a3a50",
+              color: "#5a8cff", fontSize: 9, padding: "2px 8px",
+              cursor: "pointer", fontFamily: "'Press Start 2P', monospace",
+            }}
+          >⛶ FULL</button>
         )}
       </div>
 
-      <div className="relative flex-1" style={{ background: "#08080c" }}>
+      {/* ── Terminal output ──────────────────────────────────────────────── */}
+      <div style={{ flex: 1, position: "relative", background: "#07080f", overflow: "hidden" }}>
         <div
           ref={termRef}
-          className="absolute inset-0 px-3 py-2 overflow-y-auto font-mono text-[10px] leading-[1.4] text-[#cdd6f4] whitespace-pre-wrap break-all"
+          style={{
+            position: "absolute", inset: 0,
+            padding: "8px 12px",
+            overflowY: "auto",
+            fontFamily: "'SF Mono', 'Fira Code', monospace",
+            fontSize: 11,
+            lineHeight: 1.4,
+            color: "#cdd6f4",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-all",
+          }}
           dangerouslySetInnerHTML={{ __html: ansiToHtml(trimCapture(content)) }}
         />
+
+        {/* Arrow keys (pinned mode) */}
         {pinned && send && (
-          <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10">
-            <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); send({ type: "send", target: agent.target, text: "\x1b[A" }); inputRef.current?.focus(); }}
-              className="w-9 h-8 rounded-lg bg-black/70 backdrop-blur border border-white/10 text-white/50 hover:text-white hover:bg-white/10 cursor-pointer flex items-center justify-center transition-colors"
-              title="Up → tmux"
-            >
-              <svg width={12} height={8} viewBox="0 0 12 8"><path d="M1 7L6 1L11 7" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" /></svg>
-            </button>
-            <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); send({ type: "send", target: agent.target, text: "\x1b[B" }); inputRef.current?.focus(); }}
-              className="w-9 h-8 rounded-lg bg-black/70 backdrop-blur border border-white/10 text-white/50 hover:text-white hover:bg-white/10 cursor-pointer flex items-center justify-center transition-colors"
-              title="Down → tmux"
-            >
-              <svg width={12} height={8} viewBox="0 0 12 8"><path d="M1 1L6 7L11 1" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" /></svg>
-            </button>
+          <div style={{ position: "absolute", bottom: 8, right: 8, display: "flex", flexDirection: "column", gap: 3, zIndex: 10 }}>
+            {[["↑", "\x1b[A"], ["↓", "\x1b[B"]].map(([label, key]) => (
+              <button
+                key={label}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); send({ type: "send", target: agent.target, text: key }); inputRef.current?.focus(); }}
+                style={{
+                  width: 32, height: 28,
+                  background: "#0a0b16", border: "2px solid #2a3a50",
+                  color: "#5a8cff", fontSize: 12,
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >{label}</button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Bottom: input when pinned, preview text when hovering */}
+      {/* ── Input / preview ──────────────────────────────────────────────── */}
       {pinned && send ? (
-        <div
-          className="flex items-center gap-2 px-3 py-2 bg-[#0e0e18] border-t border-white/[0.06] font-mono text-xs cursor-text"
-          onClick={() => inputRef.current?.focus()}
-        >
-          <span className="text-cyan-400 font-semibold shrink-0">&#x276f;</span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputBuf}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent text-white/90 outline-none caret-cyan-400 font-mono text-xs"
-            style={{ caretColor: "#22d3ee" }}
-            inputMode="text"
-            enterKeyHint="send"
-            spellCheck={false}
-            autoComplete="off"
-            autoFocus
-            placeholder="type command..."
-          />
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (inputBuf && send) {
-                send({ type: "send", target: agent.target, text: inputBuf });
-                setInputBuf("");
-              }
-              inputRef.current?.focus();
+        <>
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "8px 12px",
+              background: "#0a0b16",
+              borderTop: `2px solid ${accent}40`,
+              cursor: "text",
+              flexShrink: 0,
             }}
-            className="shrink-0 px-4 py-2 rounded-lg bg-cyan-500 text-black text-xs font-bold cursor-pointer hover:bg-cyan-400 active:bg-cyan-600 transition-colors shadow-lg shadow-cyan-500/20"
+            onClick={() => inputRef.current?.focus()}
           >
-            SEND
-          </button>
-        </div>
-      ) : (
-        <div className="px-3 py-2 bg-[#0e0e18] border-t border-white/[0.06] font-mono text-[9px] text-white/30 truncate">
-          {agent.preview || "..."}
-        </div>
-      )}
+            <span style={{ color: "#22d3ee", fontSize: 13, fontFamily: "monospace", flexShrink: 0 }}>❯</span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputBuf}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              style={{
+                flex: 1, background: "transparent", border: "none", outline: "none",
+                color: "#e0e8ff", caretColor: "#22d3ee",
+                fontFamily: "'SF Mono', monospace", fontSize: 12,
+              }}
+              inputMode="text"
+              enterKeyHint="send"
+              spellCheck={false}
+              autoComplete="off"
+              autoFocus
+              placeholder="type command..."
+            />
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (inputBuf && send) { send({ type: "send", target: agent.target, text: inputBuf }); setInputBuf(""); }
+                inputRef.current?.focus();
+              }}
+              style={{
+                background: "#5a8cff", border: "2px solid #8aacff",
+                color: "#07080f", fontSize: 8,
+                fontFamily: "'Press Start 2P', monospace",
+                padding: "5px 10px", cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >SEND</button>
+          </div>
 
-      {/* Shortcut hints — always visible when pinned */}
-      {pinned && (
-        <div className="flex items-center justify-center gap-3 px-3 py-1.5 bg-[#08080c] border-t border-white/[0.04] font-mono text-[8px] text-white/20">
-          <span><kbd className="text-white/30">Enter</kbd> send</span>
-          <span><kbd className="text-white/30">⌃Enter</kbd> fullscreen</span>
-          <span><kbd className="text-white/30">Esc</kbd> close</span>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              send?.({ type: "send", target: agent.target, text: "\x1b" });
-              inputRef.current?.focus();
-            }}
-            className="px-2 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-[9px] text-white/40 hover:text-white/80 hover:bg-white/10 cursor-pointer transition-colors"
-          >
-            Esc→tmux
-          </button>
+          {/* Shortcut hints */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+            padding: "5px 10px",
+            background: "#07080f",
+            borderTop: "1px solid #1a2030",
+            flexShrink: 0,
+          }}>
+            {[["Enter","send"],["⌃Enter","fullscreen"],["Esc","close"]].map(([k,d]) => (
+              <span key={k} style={{ fontSize: 6, color: "#2a3a50", fontFamily: "'Press Start 2P', monospace" }}>
+                <span style={{ color: "#445566" }}>{k}</span> {d}
+              </span>
+            ))}
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); send?.({ type: "send", target: agent.target, text: "\x1b" }); inputRef.current?.focus(); }}
+              style={{
+                background: "#0e1020", border: "1px solid #2a3a50",
+                color: "#445566", fontSize: 6,
+                fontFamily: "'Press Start 2P', monospace",
+                padding: "2px 6px", cursor: "pointer",
+              }}
+            >ESC→tmux</button>
+          </div>
+        </>
+      ) : (
+        <div style={{
+          padding: "6px 12px",
+          background: "#0a0b16",
+          borderTop: `1px solid ${accent}20`,
+          fontSize: 8, color: "#2a3a50",
+          fontFamily: "monospace",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}>
+          {agent.preview || "..."}
         </div>
       )}
     </div>

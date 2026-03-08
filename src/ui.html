@@ -3,43 +3,100 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>maw — Multi-Agent Workflow</title>
+<title>LOKI PIXFICE — TERMINAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: #0a0a0f; }
-  ::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #3a3a4e; }
-  body { background: #0a0a0f; color: #e0e0e0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; }
+  ::-webkit-scrollbar-track { background: #07080f; }
+  ::-webkit-scrollbar-thumb { background: #1e2840; }
+  ::-webkit-scrollbar-thumb:hover { background: #2a3a50; }
+  body { background: #060614; color: #e0e0e0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; }
 
-  .header { padding: 10px 20px; border-bottom: 1px solid #1a1a2e; display: flex; align-items: center; gap: 12px; }
-  .header h1 { font-size: 16px; color: #64b5f6; font-weight: 500; }
-  .header .target-name { font-size: 13px; color: #888; }
-  .header .status { font-size: 12px; margin-left: auto; }
-  .header .status.online { color: #4caf50; }
-  .header .status.offline { color: #f44336; }
-  .header .nav-links { display: flex; gap: 16px; margin-left: 16px; font-size: 14px; }
-  .header .nav-links a { color: rgba(255,255,255,0.5); text-decoration: none; transition: color 0.2s; }
-  .header .nav-links a:hover { color: rgba(255,255,255,0.8); }
-  .header .nav-links a.active { color: #26c6da; font-weight: bold; }
+  @keyframes pixel-glow { 0%,100%{opacity:.6} 50%{opacity:1} }
+  @keyframes agent-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  .container { display: flex; height: calc(100vh - 45px); }
-
-  .sidebar { width: 220px; border-right: 1px solid #1a1a2e; overflow-y: auto; flex-shrink: 0; }
-  .session { margin: 4px 0; }
-  .session-name { padding: 5px 16px; font-size: 10px; text-transform: uppercase; color: #444; letter-spacing: 1px; }
-  .window {
-    padding: 6px 12px 6px 16px; cursor: pointer; display: flex; align-items: center; gap: 6px;
-    transition: all 0.1s; border-left: 3px solid transparent; margin: 1px 0;
+  /* ── Pixel navbar ─────────────────────────────────────────────────────── */
+  .header {
+    background: #0a0b16;
+    border-bottom: 2px solid #1e2840;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-family: 'Press Start 2P', monospace;
+    image-rendering: pixelated;
+    flex-shrink: 0;
   }
-  .window:hover { background: #1a1a2e; border-left-color: #333; }
-  .window.selected { background: #1a1a3e; border-left-color: #64b5f6; }
-  .window .idx { color: #555; font-size: 11px; width: 16px; text-align: right; }
-  .window .name { color: #999; font-size: 12px; }
-  .window:hover .name { color: #fff; }
-  .window.selected .name { color: #64b5f6; font-weight: bold; }
-  .window .dot { width: 6px; height: 6px; border-radius: 50%; background: #222; margin-left: auto; flex-shrink: 0; }
-  .window .dot.active { background: #4caf50; box-shadow: 0 0 4px #4caf50; }
+  .header-logo {
+    width: 10px; height: 10px;
+    background: #5a8cff;
+    box-shadow: 0 0 8px #5a8cff80;
+    animation: pixel-glow 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .header-title { display: flex; flex-direction: column; gap: 4px; }
+  .header-title .main { font-size: 14px; color: #5a8cff; letter-spacing: 3px; }
+  .header-title .sub  { font-size: 7px;  color: #2a3a60; letter-spacing: 2px; }
+  .header-divider { width: 2px; height: 36px; background: #1e2840; flex-shrink: 0; }
+  .header-target {
+    font-size: 8px; color: #8090c0;
+    background: #1a2030; border: 1px solid #2a3a50;
+    padding: 3px 8px; max-width: 200px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .header-spacer { flex: 1; }
+  .header-nav { display: flex; align-items: center; gap: 18px; }
+  .header-nav a {
+    font-size: 10px;
+    font-family: 'Press Start 2P', monospace;
+    color: #5a6a80;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    padding-bottom: 3px;
+    letter-spacing: 1px;
+    transition: color 0.15s;
+  }
+  .header-nav a:hover { color: #8090c0; }
+  .header-nav a.active { color: #5a8cff; border-bottom-color: #5a8cff; }
+  .header-status { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .header-status .dot {
+    width: 10px; height: 10px;
+    background: #ff6b6b;
+    animation: agent-pulse 0.8s ease-in-out infinite;
+  }
+  .header-status .dot.online {
+    background: #4caf50;
+    animation: pixel-glow 2s ease-in-out infinite;
+  }
+  .header-status .label { font-size: 9px; color: #ff6b6b; }
+  .header-status .label.online { color: #4caf50; }
+
+  .container { display: flex; height: calc(100vh - 59px); }
+
+  .sidebar { width: 220px; border-right: 2px solid #1a2030; overflow-y: auto; flex-shrink: 0; background: #07080f; }
+  .session { margin: 0; }
+  .session-name {
+    padding: 8px 14px 5px;
+    font-size: 8px; text-transform: uppercase; color: #2a3a50; letter-spacing: 2px;
+    font-family: 'Press Start 2P', monospace;
+    border-bottom: 1px solid #1a2030;
+  }
+  .window {
+    padding: 8px 12px 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    border-left: 3px solid transparent; margin: 1px 0;
+    font-family: 'Press Start 2P', monospace;
+    transition: background 0.1s;
+  }
+  .window:hover { background: #0e1020; border-left-color: #2a3a50; }
+  .window.selected { background: #101828; border-left-color: #5a8cff; }
+  .window .idx { color: #2a3a50; font-size: 8px; width: 14px; text-align: right; }
+  .window .name { color: #5a6a80; font-size: 9px; }
+  .window:hover .name { color: #8090c0; }
+  .window.selected .name { color: #5a8cff; }
+  .window .dot { width: 7px; height: 7px; background: #1e2840; margin-left: auto; flex-shrink: 0; }
+  .window .dot.active { background: #4caf50; box-shadow: 0 0 5px #4caf5080; }
 
   /* Terminal pane — the whole right side */
   .term {
@@ -48,20 +105,23 @@
   }
   .term:focus { outline: none; }
   .term-output {
-    flex: 1; padding: 8px 12px; overflow-y: auto;
-    background: #0a0a0f; font-size: 13px; line-height: 1.45;
-    white-space: pre-wrap; word-break: break-all; color: #aaa; line-height: 1.35;
+    flex: 1; padding: 12px 16px; overflow-y: auto;
+    background: #07080f; font-size: 13px; line-height: 1.45;
+    white-space: pre-wrap; word-break: break-all; color: #cdd6f4;
   }
-  .term-output .placeholder { color: #333; text-align: center; margin-top: 30vh; font-size: 14px; }
+  .term-output .placeholder {
+    color: #2a3a50; text-align: center; margin-top: 30vh; font-size: 11px;
+    font-family: 'Press Start 2P', monospace; letter-spacing: 2px;
+  }
 
-  /* Typing indicator at bottom */
+  /* Input line */
   .term-input-line {
-    padding: 6px 12px; border-top: 1px solid #1a1a2e; background: #0d0d14;
-    font-size: 13px; min-height: 28px; display: flex; align-items: center;
-    color: #64b5f6;
+    padding: 8px 14px; border-top: 2px solid #1e2840; background: #0a0b16;
+    font-size: 13px; min-height: 34px; display: flex; align-items: center;
+    color: #22d3ee;
   }
-  .term-input-line .prompt { color: #555; margin-right: 6px; }
-  .term-input-line .text { color: #e0e0e0; white-space: pre; }
+  .term-input-line .prompt { color: #22d3ee; margin-right: 8px; font-size: 13px; }
+  .term-input-line .text { color: #e0e8ff; white-space: pre; }
   .term-input-line .cursor {
     display: inline-block; width: 7px; height: 15px; background: #64b5f6;
     animation: blink 1s step-end infinite; vertical-align: middle; margin-left: 1px;
@@ -80,25 +140,39 @@
   @keyframes blink { 50% { opacity: 0; } }
 
   .toast {
-    position: fixed; bottom: 20px; right: 20px; background: #1a3a1a;
-    color: #4caf50; padding: 8px 14px; border-radius: 6px; font-size: 12px;
+    position: fixed; bottom: 20px; right: 20px;
+    background: #0a1820; color: #4caf50;
+    border: 2px solid #4caf5060;
+    padding: 8px 16px; font-size: 9px;
+    font-family: 'Press Start 2P', monospace;
     opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    box-shadow: 4px 4px 0 #000;
   }
-  .toast.error { background: #3a1a1a; color: #f44336; }
+  .toast.error { background: #180a0a; color: #ff6b6b; border-color: #ff6b6b60; }
   .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>maw <span style="color:#555;font-weight:400;font-size:12px">by cat lab</span></h1>
-  <span class="target-name" id="targetName"></span>
-  <span class="status offline" id="status">connecting...</span>
-  <div class="nav-links">
-    <a href="/office/#office">Office</a>
-    <a href="/office/#mission">Mission</a>
-    <a href="/" class="active">Terminal</a>
-    <a href="/dashboard">Orbital</a>
+  <div class="header-logo"></div>
+  <div class="header-title">
+    <span class="main">LOKI PIXFICE</span>
+    <span class="sub">TERMINAL</span>
+  </div>
+  <div class="header-divider"></div>
+  <span class="header-target" id="targetName">— NO TARGET —</span>
+  <div class="header-spacer"></div>
+  <nav class="header-nav">
+    <a href="/office/#office">OFFICE</a>
+    <a href="/office/#mission">MISSION</a>
+    <a href="/office/#game">GAME</a>
+    <a href="/" class="active">TERMINAL</a>
+  </nav>
+  <div class="header-divider"></div>
+  <div class="header-status" id="statusWrap">
+    <div class="dot" id="statusDot"></div>
+    <span class="label" id="statusLabel">DISC</span>
   </div>
 </div>
 
@@ -169,8 +243,9 @@ function connect() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${proto}//${location.host}/ws`);
   ws.onopen = () => {
-    el('status').textContent = 'live';
-    el('status').className = 'status online';
+    el('statusDot').className = 'dot online';
+    el('statusLabel').className = 'label online';
+    el('statusLabel').textContent = 'LIVE';
     if (selectedTarget) ws.send(JSON.stringify({ type: 'subscribe', target: selectedTarget }));
   };
   ws.onmessage = (e) => {
@@ -186,8 +261,9 @@ function connect() {
     else if (data.type === 'error') showToast(data.error, true);
   };
   ws.onclose = () => {
-    el('status').textContent = 'reconnecting...';
-    el('status').className = 'status offline';
+    el('statusDot').className = 'dot';
+    el('statusLabel').className = 'label';
+    el('statusLabel').textContent = 'DISC';
     setTimeout(connect, 1000);
   };
   ws.onerror = () => ws.close();
@@ -219,7 +295,7 @@ function selectWindow(target, name) {
   selectedTarget = target;
   inputBuf = '';
   updateInputLine();
-  el('targetName').textContent = name;
+  el('targetName').textContent = name || target;
   el('output').innerHTML = '<div class="placeholder">connecting...</div>';
   document.querySelectorAll('.window').forEach(e => e.classList.toggle('selected', e.dataset.target === target));
   if (ws && ws.readyState === 1) {

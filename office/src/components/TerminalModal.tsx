@@ -22,13 +22,13 @@ interface TerminalModalProps {
 }
 
 function cleanName(name: string) {
-  return name.replace(/-oracle$/, "").replace(/-/g, " ");
+  return name.replace(/-oracle$/, "").replace(/-/g, " ").toUpperCase();
 }
 
-const STATUS_DOT: Record<string, string> = {
+const STATUS_COLOR: Record<string, string> = {
   busy: "#fdd835",
   ready: "#4caf50",
-  idle: "#666",
+  idle: "#445566",
 };
 
 export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSibling, siblings }: TerminalModalProps) {
@@ -38,14 +38,11 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus input on open + when switching agents
   useEffect(() => {
-    // Delay to ensure DOM is ready (needs >100ms when coming from pinned card unmount)
     const t = setTimeout(() => inputRef.current?.focus(), 120);
     return () => clearTimeout(t);
   }, [agent.target]);
 
-  // Refocus input when clicking anywhere in the modal
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -70,7 +67,6 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
   useEffect(() => {
     const el = termRef.current;
     if (el) {
-      // Always scroll to bottom on first content load
       if (isFirstContent.current && content) {
         isFirstContent.current = false;
         el.scrollTop = el.scrollHeight;
@@ -81,17 +77,12 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
     }
   }, [content]);
 
-  // Reset first-content flag when switching agents
-  useEffect(() => {
-    isFirstContent.current = true;
-  }, [agent.target]);
+  useEffect(() => { isFirstContent.current = true; }, [agent.target]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
-    // Alt+Arrow to navigate between agents in same room
     if (e.altKey && e.key === "ArrowLeft") { e.preventDefault(); onNavigate(-1); return; }
     if (e.altKey && e.key === "ArrowRight") { e.preventDefault(); onNavigate(1); return; }
-    // Alt+1-9 to jump to sibling by index
     if (e.altKey && e.key >= "1" && e.key <= "9") {
       const idx = parseInt(e.key) - 1;
       if (idx < siblings.length) { e.preventDefault(); onSelectSibling(siblings[idx]); }
@@ -103,7 +94,7 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
     } else if (e.key === "c" && e.ctrlKey) {
       e.preventDefault(); setInputBuf("");
     }
-  }, [inputBuf, agent.target, send, onClose, onNavigate]);
+  }, [inputBuf, agent.target, send, onClose, onNavigate, siblings, onSelectSibling]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
@@ -111,43 +102,73 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
     if (text) setInputBuf((b) => b + text);
   }, []);
 
-  const displayName = cleanName(agent.name);
+  const dotColor = STATUS_COLOR[agent.status] ?? "#445566";
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md"
+      style={{
+        position: "fixed", inset: 0, zIndex: 50,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(0,0,0,0.88)",
+        fontFamily: "'Press Start 2P', monospace",
+        imageRendering: "pixelated",
+      }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
       ref={wrapperRef}
     >
-      <div className="w-[90vw] max-w-[900px] h-[80vh] bg-[#0a0a0f] border border-white/[0.06] rounded-xl flex flex-col overflow-hidden shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-2 bg-[#0e0e18] border-b border-white/[0.06]">
-          <div className="flex gap-1.5 shrink-0">
-            <button onClick={onClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-110 cursor-pointer" />
-            <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
-            <span className="w-3 h-3 rounded-full bg-[#28c840]" />
+      <div style={{
+        width: "90vw", maxWidth: 900, height: "80vh",
+        background: "#07080f",
+        border: `2px solid ${dotColor}`,
+        boxShadow: `0 0 20px ${dotColor}30, 4px 4px 0 #000`,
+        display: "flex", flexDirection: "column", overflow: "hidden",
+      }}>
+
+        {/* ── Window title bar */}
+        <div style={{
+          background: "#0a0b16",
+          borderBottom: `2px solid ${dotColor}40`,
+          padding: "8px 12px",
+          display: "flex", alignItems: "center", gap: 10,
+          flexShrink: 0,
+        }}>
+          {/* Traffic-light row */}
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <button
+              onClick={onClose}
+              style={{ width: 12, height: 12, background: "#ff5f57", border: "none", cursor: "pointer", padding: 0 }}
+            />
+            <span style={{ width: 12, height: 12, background: "#febc2e", display: "block" }} />
+            <span style={{ width: 12, height: 12, background: "#28c840", display: "block" }} />
           </div>
 
-          {/* Agent tab bar */}
-          <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none mx-2">
+          <div style={{ width: 2, height: 24, background: "#1e2840", flexShrink: 0 }} />
+
+          {/* Agent tabs */}
+          <div style={{ display: "flex", alignItems: "center", gap: 2, overflowX: "auto", flex: 1 }}>
             {siblings.map((s, i) => {
               const active = s.target === agent.target;
+              const sc = STATUS_COLOR[s.status] ?? "#445566";
               return (
                 <button
                   key={s.target}
                   onClick={() => onSelectSibling(s)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono whitespace-nowrap cursor-pointer transition-all ${
-                    active
-                      ? "bg-white/10 text-white/90"
-                      : "text-white/35 hover:text-white/60 hover:bg-white/[0.04]"
-                  }`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "4px 8px",
+                    background: active ? "#1a2240" : "transparent",
+                    border: `1px solid ${active ? sc : "#1e2840"}`,
+                    color: active ? "#e0e8ff" : "#445566",
+                    fontSize: 8,
+                    fontFamily: "'Press Start 2P', monospace",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    transition: "all 0.1s",
+                  }}
                 >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: STATUS_DOT[s.status] || "#555" }}
-                  />
+                  <span style={{ width: 6, height: 6, background: sc, flexShrink: 0 }} />
                   {i < 9 && (
-                    <span className="text-[9px] text-white/20">{i + 1}</span>
+                    <span style={{ fontSize: 6, color: "#2a3a50" }}>{i + 1}</span>
                   )}
                   {cleanName(s.name)}
                 </button>
@@ -155,30 +176,71 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
             })}
           </div>
 
-          <div className="ml-auto flex items-center gap-3 shrink-0">
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
             {siblings.length > 1 && (
-              <span className="text-[9px] text-white/20 tracking-wider">Alt+1-{Math.min(9, siblings.length)}</span>
+              <span style={{ fontSize: 7, color: "#2a3a50" }}>ALT+1-{Math.min(9, siblings.length)}</span>
             )}
-            <button onClick={onClose} className="text-white/20 hover:text-white/50 text-lg cursor-pointer">
-              &times;
+            <button
+              onClick={onClose}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                fontSize: 18, color: "#445566", lineHeight: 1, padding: "0 2px",
+              }}
+            >
+              ×
             </button>
           </div>
         </div>
 
-        {/* Terminal output */}
+        {/* ── Agent info strip */}
+        <div style={{
+          background: "#0a0b16",
+          borderBottom: "1px solid #1a2030",
+          padding: "5px 14px",
+          display: "flex", alignItems: "center", gap: 10,
+          flexShrink: 0,
+        }}>
+          <div style={{ width: 8, height: 8, background: dotColor, animation: agent.status === "busy" ? "agent-pulse 0.8s infinite" : "none" }} />
+          <span style={{ fontSize: 9, color: dotColor }}>{cleanName(agent.name)}</span>
+          <span style={{ fontSize: 7, color: "#2a3a50" }}>{agent.target}</span>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 7, color: dotColor, background: `${dotColor}18`, padding: "2px 6px", border: `1px solid ${dotColor}40` }}>
+            {agent.status.toUpperCase()}
+          </span>
+        </div>
+
+        {/* ── Terminal output */}
         <div
           ref={termRef}
-          className="flex-1 px-4 py-3 overflow-y-auto font-mono text-[13px] leading-[1.35] text-[#cdd6f4] whitespace-pre-wrap break-all bg-[#0a0a0f]"
+          style={{
+            flex: 1,
+            padding: "12px 16px",
+            overflowY: "auto",
+            fontFamily: "'SF Mono', 'Fira Code', monospace",
+            fontSize: 13,
+            lineHeight: 1.4,
+            color: "#cdd6f4",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-all",
+            background: "#07080f",
+          }}
           dangerouslySetInnerHTML={{ __html: ansiToHtml(trimCapture(content)) }}
         />
 
-        {/* Input */}
+        {/* ── Input line */}
         <div
-          className="flex items-center gap-2 px-4 py-2 bg-[#0e0e18] border-t border-white/[0.06] font-mono text-xs cursor-text"
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 14px",
+            background: "#0a0b16",
+            borderTop: `2px solid ${dotColor}40`,
+            cursor: "text",
+            flexShrink: 0,
+          }}
           onClick={() => inputRef.current?.focus()}
         >
-          <span className="text-cyan-400 font-semibold shrink-0">&#x276f;</span>
-          <div className="relative flex-1 min-h-[20px]">
+          <span style={{ fontSize: 11, color: "#22d3ee", fontFamily: "monospace", flexShrink: 0 }}>❯</span>
+          <div style={{ flex: 1, position: "relative", minHeight: 20 }}>
             <input
               ref={inputRef}
               type="text"
@@ -186,8 +248,16 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
               onChange={(e) => setInputBuf(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              className="absolute inset-0 w-full bg-transparent text-white/90 outline-none caret-cyan-400 font-mono text-xs"
-              style={{ caretColor: "#22d3ee" }}
+              style={{
+                position: "absolute", inset: 0, width: "100%",
+                background: "transparent",
+                color: "#e0e8ff",
+                outline: "none",
+                caretColor: "#22d3ee",
+                fontFamily: "'SF Mono', monospace",
+                fontSize: 13,
+                border: "none",
+              }}
               spellCheck={false}
               autoComplete="off"
               autoFocus

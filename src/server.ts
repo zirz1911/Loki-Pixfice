@@ -16,6 +16,113 @@ app.get("/api/capture", async (c) => {
   return c.json({ content: await capture(target) });
 });
 
+// ── Conversation parser ─────────────────────────────────────────────────────
+
+export interface ConvTurn {
+  role: 'user' | 'assistant' | 'tool';
+  text: string;
+}
+
+function stripAnsiRaw(s: string): string {
+  // Strip all ANSI escape sequences (colors, cursor moves, etc.)
+  return s.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')
+           .replace(/\x1b\][^\x07]*\x07/g, '')
+           .replace(/\x1b[()][AB012]/g, '')
+           .replace(/\x1b./g, '');
+}
+
+const BOX_CHARS = /^[╭╰╮╯│─═▐▛▜▝▞▘▙▟◀▶\s]+$/;
+const SPINNER_CHARS = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏\s]+$/;
+const SKIP_PREFIXES = ['✻ Welcome', 'Tips for', 'cwd:', '? for shortcuts', 'Claude Code', '▐', '▛', '▝', '▜', '· claude', '· sonnet', '· haiku', '· opus'];
+const TOKEN_LINE = /\d+k?\s*(input|output|tokens|context)/i;
+const BASH_PROMPT = /^[\w.\-]+@[\w.\-]+:[~\/].*[$#]\s/;  // paji@machine:~/path$ cmd
+const SHELL_CMD = /^(unset|export|cd|ls|echo|bash|bun|node|npm|yarn|python|git)\s/i;
+
+export function parseConversation(raw: string): ConvTurn[] {
+  const lines = stripAnsiRaw(raw).split('\n');
+  const turns: ConvTurn[] = [];
+  let currentRole: ConvTurn['role'] | null = null;
+  let currentText: string[] = [];
+  // Only parse content after the first ❯ prompt — skips all startup noise
+  let seenPrompt = false;
+
+  function flush() {
+    if (currentRole && currentText.length > 0) {
+      let text = currentText.join('\n').trim();
+      // Strip leading ● marker from assistant messages (Claude Code response indicator)
+      if (currentRole === 'assistant') text = text.replace(/^●\s+/, '');
+      if (text.length > 2) turns.push({ role: currentRole, text });
+    }
+    currentRole = null;
+    currentText = [];
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    const trimmed = line.trim();
+
+    // User prompt line — marks start of real conversation
+    if (trimmed.startsWith('❯')) {
+      seenPrompt = true;
+      flush();
+      const text = trimmed.startsWith('❯ ') ? trimmed.slice(2).trim() : '';
+      if (text) turns.push({ role: 'user', text });
+      continue;
+    }
+
+    // Skip everything before the first prompt (startup noise, banners, shell cmds)
+    if (!seenPrompt) continue;
+
+    if (!trimmed) {
+      if (currentRole) currentText.push('');
+      continue;
+    }
+
+    // Skip box-drawing, spinners, token counts
+    if (BOX_CHARS.test(trimmed)) continue;
+    if (SPINNER_CHARS.test(trimmed)) continue;
+    if (TOKEN_LINE.test(trimmed)) continue;
+    if (SKIP_PREFIXES.some(p => trimmed.toLowerCase().startsWith(p.toLowerCase()))) continue;
+
+    // Skip separator lines (─── ▪▪▪ ─ etc)
+    if (/^[─═▪▸▹\-\s]+$/.test(trimmed)) continue;
+
+    // Tool call/result: ● ToolName(, ◆ thinking, ✔/✗ result, ⎿ output
+    // Note: ● followed by plain text = assistant message, not tool
+    const isToolCall = /^●\s+\w+\s*\(/.test(trimmed)   // ● ToolName(args)
+      || /^[◆✔✗⎿▶]/.test(trimmed);                     // other tool markers
+    if (isToolCall) {
+      if (currentRole === 'assistant') flush();
+      if (currentRole !== 'tool') { flush(); currentRole = 'tool'; }
+      currentText.push(trimmed);
+      continue;
+    }
+
+    // End tool block on non-tool, non-indented content
+    if (currentRole === 'tool' && !line.startsWith('  ') && !line.startsWith('\t')) {
+      flush();
+    }
+
+    // Default: assistant response
+    if (currentRole !== 'assistant') { flush(); currentRole = 'assistant'; }
+    currentText.push(trimmed);
+  }
+
+  flush();
+  return turns;
+}
+
+app.get("/api/conversation", async (c) => {
+  const target = c.req.query("target");
+  if (!target) return c.json({ error: "target required" }, 400);
+  const raw = await capture(target, 400);
+  // Trim bottom 15% to exclude tmux statusline + Claude footer
+  const allLines = raw.split('\n');
+  const cutoff = Math.max(1, Math.floor(allLines.length * 0.85));
+  const trimmed = allLines.slice(0, cutoff).join('\n');
+  return c.json({ turns: parseConversation(trimmed) });
+});
+
 app.post("/api/send", async (c) => {
   const { target, text } = await c.req.json();
   if (!target || !text) return c.json({ error: "target and text required" }, 400);

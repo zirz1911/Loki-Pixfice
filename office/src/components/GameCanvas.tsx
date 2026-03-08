@@ -15,38 +15,53 @@ import {
   ITEM_W, ITEM_H, loadLayout, saveLayout, generateDefaultSection,
 } from "../lib/officeLayout";
 
-// ── Sprite constants (canvas-drawn characters) ────────────────────────────────
-const PS  = 3;           // pixel scale
-const SPW = 16 * PS;     // 48px wide
-const SPH = 19 * PS;     // 57px tall (14 body rows + 5 leg rows)
+// ── Sprite constants — matches AgentAvatar.tsx exactly ───────────────────────
+const PS  = 4;           // pixel scale — matches AgentAvatar
+const SPW = 8 * PS;      // 32px wide
+const SPH = 12 * PS;     // 48px tall (12 sprite rows)
 
-// Direction enum (movement only — no sprite rows needed)
+// Direction enum (movement only)
 const DIR_DOWN = 0, DIR_UP = 1, DIR_LEFT = 2, DIR_RIGHT = 3;
 
-const WALK_FRAMES = 4, TYPE_FRAMES = 2;
+const WALK_FRAMES = 4;
 
-// Body pixel grid (14 rows × 16 cols)
-const SPRITE_TOP = [
-  '0000HHHHHHHH0000',
-  '000HHHHHHHHHH000',
-  '000HSSSSSSSSSH00',
-  '00HSSSSSSSSSSSH0',
-  '00HSEPPSEPSSSH00',
-  '00HSSSSSSSSSSSH0',
-  '00HSSSMWWMSSSH00',
-  '00HSSSSSSSSSH000',
-  '000SSSSSSSS00000',
-  '00CCCSSSSCCC0000',
-  '0CCCCCCCCCCCCC00',
-  '1CCCCCCCCCCCCC00',
-  '0CAAACCCCAAACCC0',
-  '0CCCCCCCCCCCCC00',
-];
-// Leg frames: [0]=stand  [1]=walkA  [2]=walkB
-const LEGS: string[][] = [
-  ['00LLLLCCCLLLL000','000LLLL0LLLLL000','000LLLL0LLLLL000','000BBBB0BBBBB000','00BBBBB00BBBBB00'],
-  ['00LLLLCCCLLLL000','00LLLLL0LLLLL000','00LLLLL00LLLL000','00BBBBB00BBBB000','0BBBBBB000BBBBB0'],
-  ['00LLLLCCCLLLL000','000LLLL0LLLLLL00','0000LLLL0LLLLL00','0000BBBB0BBBBB00','00BBBBB000BBBBBB'],
+// 8-col × 12-row pixel sprites — identical to AgentAvatar.tsx
+const SPRITES: Record<string, string[]> = {
+  odin: [
+    '0AAAAA00','0HHHHHH0','0SSSSSS0','0SEPPSS0',
+    '0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC',
+    'CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0',
+  ],
+  thor: [
+    '0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0',
+    '0SSSSSS0','0SSMSSS0','0CCCCCC0','CAAACCCC',
+    'CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0',
+  ],
+  loki: [
+    '0HHHHHH0','HHHHHHH0','H0SSSSS0','0SEPPSS0',
+    '0SSSSSS0','0SWMSSS0','0CCCCCC0','CCAACCCC',
+    'CCAAC000','0CCCCCC0','0LL00LL0','0BB00BB0',
+  ],
+  heimdall: [
+    '0HAAHH00','0HHHHHH0','0SSSSSS0','0SEEPSS0',
+    '0SEEPSS0','0SSMSSS0','0CCCCCC0','CAACCACC',
+    'CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0',
+  ],
+  tyr: [
+    '0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0',
+    '0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC',
+    'ACCCCC00','0CCCCCC0','0LL00LL0','0BB00BB0',
+  ],
+  ymir: [
+    'HHHHHHH0','HHHHHHH0','HSSSSSS0','HSEPPSS0',
+    'HSSSSSS0','HSSMWSS0','HCCCCCCH','CAAACCCA',
+    'CCAACCCA','HCCCCCCH','HLL00LLH','HBB00BBH',
+  ],
+};
+SPRITES.default = [
+  '00HHHH00','0HHHHHH0','0SSSSSS0','0SEPPSS0',
+  '0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC',
+  'CCCCCCCC','0CCCCCC0','0LL00LL0','0BB00BB0',
 ];
 
 interface Pal { H:string;S:string;E:string;P:string;M:string;W:string;C:string;A:string;L:string;B:string }
@@ -59,25 +74,19 @@ const PALETTES: Record<string, Pal> = {
   tyr:      { H:'#802020',S:'#fde2c8',E:'#fff',P:'#401010',M:'#601010',W:'#f0d0d0',C:'#802020',A:'#ff6060',L:'#601010',B:'#400808' },
   ymir:     { H:'#a0c0d8',S:'#c0d8f0',E:'#90b8d0',P:'#304858',M:'#4a6878',W:'#d0e8f8',C:'#4878a0',A:'#90d0f8',L:'#305070',B:'#203040' },
 };
-function getPalette(name: string): Pal {
-  const key = name.toLowerCase().replace(/-oracle$/, '');
-  const pk = Object.keys(PALETTES).find(k => k !== 'default' && key.startsWith(k)) ?? 'default';
-  return PALETTES[pk];
-}
-const LEG_CYCLE = [0, 1, 2, 1] as const;
-
 function drawAgent(
   ctx: CanvasRenderingContext2D,
   x: number, y: number,
   name: string,
-  legFrame: number,
   facingRight: boolean,
 ) {
-  const pal = getPalette(name);
-  const rows = [...SPRITE_TOP, ...LEGS[legFrame]];
+  const key = name.toLowerCase().replace(/-oracle$/, '');
+  const pk = Object.keys(PALETTES).find(k => k !== 'default' && key.startsWith(k)) ?? 'default';
+  const pal = PALETTES[pk];
+  const rows = SPRITES[pk] ?? SPRITES.default;
   const cmap: Record<string, string> = {
     H:pal.H, S:pal.S, E:pal.E, P:pal.P, M:pal.M,
-    W:pal.W, C:pal.C, A:pal.A, L:pal.L, B:pal.B, '1':pal.C,
+    W:pal.W, C:pal.C, A:pal.A, L:pal.L, B:pal.B,
   };
   ctx.save();
   if (!facingRight) { ctx.translate(x + SPW, y); ctx.scale(-1, 1); x = 0; }
@@ -102,13 +111,12 @@ const WALL_T   = 10;
 const DESK_W   = 56, DESK_H = 28;
 const CHAIR_W  = 22, CHAIR_H = 14;
 // SIT_DY: sprite top offset from desk.y when sitting
-// Need: desk.y + SIT_DY + SPH < desk.y + DESK_H + 1  →  SIT_DY < DESK_H+1−SPH = 29−57 = −28
-const SIT_DY   = -30;
+// Need: desk.y + SIT_DY + SPH ≈ desk.y + DESK_H  →  SIT_DY ≈ DESK_H - SPH = 28 - 48 = -20
+const SIT_DY   = -20;
 
 const WALK_SPD = 1.5, WANDER_MIN = 60, WANDER_MAX = 190;
-// pixel-agents timing: walk=150ms/frame, type=300ms/frame
-// at 12fps (83ms/tick): WALK_TICKS=2→167ms, TYPE_TICKS=4→333ms
-const WALK_TICKS = 2, TYPE_TICKS = 4;
+// at 12fps (83ms/tick): WALK_TICKS=2→167ms per frame
+const WALK_TICKS = 2;
 const INTERVAL = 1000 / 12;
 
 // ── Section themes (accent + label only) ──────────────────────────────────────
@@ -136,7 +144,7 @@ function getTheme(name: string, i: number) {
 
 // ── Floor tile ─────────────────────────────────────────────────────────────────
 function drawFloorTile(ctx: CanvasRenderingContext2D, x: number, y: number, tx: number, ty: number) {
-  ctx.fillStyle = (tx + ty) % 2 === 0 ? '#3a2418' : '#2e1c12';
+  ctx.fillStyle = (tx + ty) % 2 === 0 ? '#0e1428' : '#0a1020';
   ctx.fillRect(x, y, T, T);
   ctx.fillStyle = 'rgba(255,255,255,0.07)';
   ctx.fillRect(x, y, T, 1);
@@ -311,7 +319,7 @@ function computeSections(w: number, h: number, sessions: Session[]): Section[] {
 // ── Entity state ───────────────────────────────────────────────────────────────
 interface Entity {
   x: number; y: number; tx: number; ty: number;
-  dir: number; facingRight: boolean; walkFrame: number; typeFrame: number;
+  dir: number; facingRight: boolean; walkFrame: number;
   frameTimer: number; wanderTimer: number;
   zone: { x: number; y: number; w: number; h: number };
   homeX: number; homeY: number;
@@ -411,7 +419,7 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
         const sy = sec.wanderZone.y + Math.random() * Math.max(0, sec.wanderZone.h - SPH);
         ents.set(ag.target, {
           x: sx, y: sy, tx: sx, ty: sy,
-          dir: DIR_DOWN, facingRight: true, walkFrame: 0, typeFrame: 0, frameTimer: 0,
+          dir: DIR_DOWN, facingRight: true, walkFrame: 0, frameTimer: 0,
           wanderTimer: Math.floor(Math.random() * WANDER_MAX),
           zone: sec.wanderZone, homeX, homeY,
         });
@@ -549,7 +557,7 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
       const layout = layoutRef.current;
 
       // ── Header bar (behind navbar) ────────────────────────────────────────
-      ctx.fillStyle = '#16202e'; ctx.fillRect(0, 0, w, HEADER_H);
+      ctx.fillStyle = '#0a0b16'; ctx.fillRect(0, 0, w, HEADER_H);
       // Per-section accent strip at bottom of header
       for (const { sx, sw, accent } of sections) {
         ctx.fillStyle = accent; ctx.globalAlpha = 0.5;
@@ -626,21 +634,18 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
           const homeX = desk ? desk.x + Math.floor((ITEM_W.desk - SPW) / 2) : ent.zone.x;
           const homeY = desk ? desk.y + SIT_DY : ent.zone.y;
 
-          let ax: number, ay: number, legFrame: number, facingRight: boolean;
+          let ax: number, ay: number, facingRight: boolean;
           if (busy) {
             const arrived = Math.hypot(homeX - ent.x, homeY - ent.y) < 3;
             ax = arrived ? homeX : Math.round(ent.x);
             ay = arrived ? homeY : Math.round(ent.y);
             facingRight = arrived ? true : ent.facingRight;
-            legFrame = arrived ? 0 : LEG_CYCLE[ent.walkFrame % 4];
           } else {
             ax = Math.round(ent.x); ay = Math.round(ent.y);
-            const moving = Math.hypot(ent.tx - ent.x, ent.ty - ent.y) > 1.5;
             facingRight = ent.facingRight;
-            legFrame = moving ? LEG_CYCLE[ent.walkFrame % 4] : 0;
           }
 
-          const _ax = ax, _ay = ay, _legFrame = legFrame, _facingRight = facingRight;
+          const _ax = ax, _ay = ay, _facingRight = facingRight;
           items.push({
             zY: ay + SPH, pri: 1,
             draw: () => {
@@ -663,11 +668,11 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
                 ctx.textAlign = 'center'; ctx.fillText(dots, _ax + SPW / 2, _ay - 4);
                 ctx.restore();
               }
-              // Status dot
+              // Status dot (top-right of sprite, matches AgentAvatar)
               const dotColor = ag.status === 'busy' ? '#fdd835' : ag.status === 'ready' ? '#5ac88c' : '#445566';
               ctx.fillStyle = dotColor;
-              ctx.fillRect(_ax + 14 * PS, _ay, PS * 2, PS * 2);
-              drawAgent(ctx, _ax, _ay, ag.name, _legFrame, _facingRight);
+              ctx.fillRect(_ax + SPW, _ay, PS * 2, PS * 2);
+              drawAgent(ctx, _ax, _ay, ag.name, _facingRight);
             },
           });
 
@@ -793,10 +798,6 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
             ent.walkFrame = 0; ent.frameTimer = 0;
           }
 
-          if (busy) {
-            ent.frameTimer++;
-            if (ent.frameTimer >= TYPE_TICKS) { ent.frameTimer = 0; ent.typeFrame = (ent.typeFrame + 1) % TYPE_FRAMES; }
-          }
         }
       }
     }

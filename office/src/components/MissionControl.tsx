@@ -1,9 +1,98 @@
 import { memo, useMemo, useState, useCallback, useRef, useEffect } from "react";
-import { AgentAvatar } from "./AgentAvatar";
 import { HoverPreviewCard } from "./HoverPreviewCard";
 import { Joystick } from "./Joystick";
-import { roomStyle } from "../lib/constants";
-import type { AgentState, Session } from "../lib/types";
+import { roomStyle, NORSE_AGENTS, agentColor } from "../lib/constants";
+import type { AgentState, Session, PaneStatus } from "../lib/types";
+
+// ── Pixel sprite data (matches AgentAvatar.tsx) ───────────────────────────────
+const PS = 5; // pixel size in SVG units
+
+interface Pal { H:string; S:string; E:string; P:string; M:string; W:string; C:string; A:string; L:string; B:string }
+const PALS: Record<string, Pal> = {
+  default:  { H:'#6b3a2a',S:'#fde2c8',E:'#ffffff',P:'#2c1b0e',M:'#5a2020',W:'#c8a070',C:'#4a7a2c',A:'#6aaa4c',L:'#4060a0',B:'#2a3070' },
+  odin:     { H:'#c8a830',S:'#d4956b',E:'#ffffff',P:'#1a1008',M:'#603020',W:'#e0c080',C:'#1e1040',A:'#f5c518',L:'#2c1848',B:'#180830' },
+  thor:     { H:'#d4b050',S:'#fde2c8',E:'#ffffff',P:'#1a1040',M:'#503020',W:'#fae8c8',C:'#2050a8',A:'#4fc3f7',L:'#183080',B:'#102060' },
+  loki:     { H:'#1a0a30',S:'#c88060',E:'#ffffff',P:'#3a1060',M:'#501840',W:'#d0a0b0',C:'#5a2080',A:'#c060e0',L:'#3a1060',B:'#200840' },
+  heimdall: { H:'#d4c080',S:'#fde2c8',E:'#ffffff',P:'#103830',M:'#305040',W:'#e8f0e8',C:'#1a6858',A:'#40d0b0',L:'#0e3838',B:'#082828' },
+  tyr:      { H:'#802020',S:'#fde2c8',E:'#ffffff',P:'#401010',M:'#601010',W:'#f0d0d0',C:'#802020',A:'#ff6060',L:'#601010',B:'#400808' },
+  ymir:     { H:'#a0c0d8',S:'#c0d8f0',E:'#90b8d0',P:'#304858',M:'#4a6878',W:'#d0e8f8',C:'#4878a0',A:'#90d0f8',L:'#305070',B:'#203040' },
+};
+const SPRS: Record<string, string[]> = {
+  odin:     ['0AAAAA00','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  thor:     ['0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CAAACCCC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  loki:     ['0HHHHHH0','HHHHHHH0','H0SSSSS0','0SEPPSS0','0SSSSSS0','0SWMSSS0','0CCCCCC0','CCAACCCC','CCAAC000','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  heimdall: ['0HAAHH00','0HHHHHH0','0SSSSSS0','0SEEPSS0','0SEEPSS0','0SSMSSS0','0CCCCCC0','CAACCACC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  tyr:      ['0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','ACCCCC00','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  ymir:     ['HHHHHHH0','HHHHHHH0','HSSSSSS0','HSEPPSS0','HSSSSSS0','HSSMWSS0','HCCCCCCH','CAAACCCA','CCAACCCA','HCCCCCCH','HLL00LLH','HBB00BBH'],
+  default:  ['00HHHH00','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','CCCCCCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+};
+
+function buildSvgPixels(rows: string[], pal: Pal) {
+  const cmap: Record<string, string> = { H:pal.H,S:pal.S,E:pal.E,P:pal.P,M:pal.M,W:pal.W,C:pal.C,A:pal.A,L:pal.L,B:pal.B };
+  const pixels: { x: number; y: number; color: string }[] = [];
+  rows.forEach((row, ry) => {
+    for (let cx = 0; cx < row.length; cx++) {
+      const ch = row[cx];
+      if (ch === '0') continue;
+      const color = cmap[ch];
+      if (color) pixels.push({ x: cx * PS, y: ry * PS, color });
+    }
+  });
+  return pixels;
+}
+
+// ── SVG Pixel Sprite — renders inside <svg> context ──────────────────────────
+function SvgAgentCircle({
+  name, status, saiyan, scale, onClick, onMouseEnter, onMouseLeave,
+}: {
+  name: string; status: PaneStatus; accent: string; saiyan?: boolean; scale: number;
+  onClick?: () => void; onMouseEnter?: () => void; onMouseLeave?: () => void;
+}) {
+  const key = name.toLowerCase().replace(/-oracle$/, "");
+  const pk = Object.keys(PALS).find(k => k !== "default" && key.startsWith(k)) ?? "default";
+  const pal = PALS[pk];
+  const rows = SPRS[pk] ?? SPRS.default;
+  const pixels = buildSvgPixels(rows, pal);
+  const dotColor = status === "busy" ? "#fdd835" : status === "ready" ? "#4caf50" : "#445566";
+  const W = 8 * PS;   // 40 SVG units
+  const H = rows.length * PS; // 60 SVG units
+  const ox = -W / 2;
+  const oy = -H / 2;
+
+  return (
+    <g
+      transform={`scale(${scale})`}
+      style={{ cursor: "pointer" }}
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* Saiyan power ring */}
+      {saiyan && (
+        <ellipse rx={W / 2 + 16} ry={6} fill="none" stroke="#fdd835" strokeWidth={1.5} opacity={0.5}
+          style={{ animation: "saiyan-ring 1.5s ease-out infinite" }} />
+      )}
+      {/* Status glow */}
+      {status !== "idle" && (
+        <rect x={ox - 5} y={oy - 3} width={W + 10} height={H + 6}
+          fill={dotColor} opacity={0.10} />
+      )}
+      {/* Pixel sprite */}
+      <g transform={`translate(${ox}, ${oy})`} style={{ shapeRendering: "crispEdges" }}>
+        {pixels.map(({ x, y, color }, i) => (
+          <rect key={i} x={x} y={y} width={PS} height={PS} fill={color} />
+        ))}
+      </g>
+      {/* Status dot (top-right) */}
+      <rect
+        x={W / 2 - PS + 2} y={oy - PS * 2}
+        width={PS * 2} height={PS * 2}
+        fill={dotColor}
+        style={status === "busy" ? { animation: "agent-pulse 0.5s ease-in-out infinite" } : {}}
+      />
+    </g>
+  );
+}
 
 interface MissionControlProps {
   sessions: Session[];
@@ -38,8 +127,10 @@ export const MissionControl = memo(function MissionControl({
 
   const [zoom, setZoom] = useState(1.1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const hasPanned = useRef(false); // true if mouse moved enough to count as a drag
+  const touchRef = useRef<{ x: number; y: number; panX: number; panY: number; dist: number | null }>({ x: 0, y: 0, panX: 0, panY: 0, dist: null });
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -101,36 +192,72 @@ export const MissionControl = memo(function MissionControl({
   const readyCount = agents.filter((a) => a.status === "ready").length;
   const idleCount = agents.filter((a) => a.status === "idle").length;
 
-  // Mouse wheel zoom
+  // Mouse wheel zoom (zoom toward cursor position)
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.05 : 0.05;
-      setZoom((z) => Math.max(0.5, Math.min(3, z + delta)));
+      const factor = e.deltaY > 0 ? 0.92 : 1.08;
+      setZoom((z) => Math.max(0.3, Math.min(4, z * factor)));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Pan with middle mouse or drag
+  // Mouse drag to pan — left-click on background, any button works
   const onMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1 || e.button === 0 && e.shiftKey) {
+    if (e.button === 0 || e.button === 1) {
       e.preventDefault();
-      setIsPanning(true);
+      setIsDragging(true);
+      hasPanned.current = false;
       panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
     }
   }, [pan]);
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isDragging) return;
     const dx = e.clientX - panStart.current.x;
     const dy = e.clientY - panStart.current.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      hasPanned.current = true;
+    }
     setPan({ x: panStart.current.panX + dx / zoom, y: panStart.current.panY + dy / zoom });
-  }, [isPanning, zoom]);
+  }, [isDragging, zoom]);
 
-  const onMouseUp = useCallback(() => setIsPanning(false), []);
+  const onMouseUp = useCallback(() => setIsDragging(false), []);
+
+  // Touch pan (1 finger) + pinch zoom (2 fingers)
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      hasPanned.current = false;
+      touchRef.current = {
+        x: e.touches[0].clientX, y: e.touches[0].clientY,
+        panX: pan.x, panY: pan.y, dist: null,
+      };
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      touchRef.current = { ...touchRef.current, dist: Math.hypot(dx, dy) };
+    }
+  }, [pan]);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const dx = e.touches[0].clientX - touchRef.current.x;
+      const dy = e.touches[0].clientY - touchRef.current.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) hasPanned.current = true;
+      setPan({ x: touchRef.current.panX + dx / zoom, y: touchRef.current.panY + dy / zoom });
+    } else if (e.touches.length === 2 && touchRef.current.dist !== null) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      const dist = Math.hypot(dx, dy);
+      const factor = dist / touchRef.current.dist;
+      touchRef.current.dist = dist;
+      setZoom((z) => Math.max(0.3, Math.min(4, z * factor)));
+    }
+  }, [zoom]);
 
   const resetView = useCallback(() => { setZoom(1.1); setPan({ x: 0, y: 0 }); }, []);
 
@@ -170,12 +297,13 @@ export const MissionControl = memo(function MissionControl({
     });
   }, [sessions, sessionAgents]);
 
-  // Click agent → pin preview card (not fullscreen modal)
+  // Click agent → pin preview card (skip if we dragged)
   const onAgentClick = useCallback(
     (agent: AgentState, svgX: number, svgY: number, room: { label: string; accent: string }) => {
+      if (hasPanned.current) return; // was a drag, not a click
       const pos = calcCardPos(svgX, svgY);
       setPinnedPreview({ agent, room, pos, svgX, svgY });
-      setHoverPreview(null); // hide hover
+      setHoverPreview(null);
       send({ type: "subscribe", target: agent.target });
     },
     [calcCardPos, send]
@@ -322,11 +450,15 @@ export const MissionControl = memo(function MissionControl({
     <div
       ref={containerRef}
       className="relative w-full overflow-hidden"
-      style={{ background: "#020208", height: "calc(100vh - 60px)", cursor: isPanning ? "grabbing" : "default" }}
+      style={{ background: "transparent", height: "100%", cursor: isDragging ? "grabbing" : "grab", userSelect: "none" }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       onMouseLeave={onMouseUp}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={() => { setIsDragging(false); }}
+
     >
       {/* SVG Mission Control */}
       <svg
@@ -441,8 +573,13 @@ export const MissionControl = memo(function MissionControl({
                     {isHovered && (
                       <circle cx={0} cy={-5} r={55} fill={s.style.accent} opacity={0.08} />
                     )}
-                    <g
-                      transform={`scale(${scale})`}
+                    <SvgAgentCircle
+                      name={agent.name}
+                      status={agent.status}
+                      accent={s.style.accent}
+                      saiyan={saiyanTargets.has(agent.target)}
+                      scale={scale}
+                      onClick={() => onAgentClick(agent, ax, ay, { label: s.style.label, accent: s.style.accent })}
                       onMouseEnter={() => {
                         setHoveredAgent(agent.target);
                         showPreview(agent, { label: s.style.label, accent: s.style.accent }, ax, ay);
@@ -451,18 +588,7 @@ export const MissionControl = memo(function MissionControl({
                         setHoveredAgent(null);
                         hidePreview();
                       }}
-                      style={{ transition: "transform 0.15s ease-out" }}
-                    >
-                      <AgentAvatar
-                        name={agent.name}
-                        target={agent.target}
-                        status={agent.status}
-                        preview={agent.preview}
-                        accent={s.style.accent}
-                        saiyan={saiyanTargets.has(agent.target)}
-                        onClick={() => onAgentClick(agent, ax, ay, { label: s.style.label, accent: s.style.accent })}
-                      />
-                    </g>
+                    />
                     {/* Agent name (below) */}
                     <text
                       y={28}
@@ -502,18 +628,26 @@ export const MissionControl = memo(function MissionControl({
         })}
       </svg>
 
-      {/* Controls — bottom right: pan + zoom in one cluster */}
-      <div className="absolute bottom-4 right-6 flex flex-col items-center gap-1">
+      {/* Controls — bottom right */}
+      <div style={{
+        position: "absolute", bottom: 16, right: 20,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+        fontFamily: "'Press Start 2P', monospace",
+      }}>
         <Joystick onPan={onJoystickPan} />
-        <div className="w-6 border-t border-white/[0.06] my-0.5" />
-        <button onClick={() => setZoom((z) => Math.min(3, z + 0.05))}
-          className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur border border-white/10 text-white/70 hover:text-white hover:bg-white/10 text-lg font-bold cursor-pointer">+</button>
-        <button onClick={resetView}
-          className="w-8 h-6 rounded-lg bg-black/50 backdrop-blur border border-white/10 text-[9px] text-white/50 hover:text-white hover:bg-white/10 cursor-pointer font-mono">
-          {Math.round(zoom * 100)}%
-        </button>
-        <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.05))}
-          className="w-8 h-8 rounded-lg bg-black/50 backdrop-blur border border-white/10 text-white/70 hover:text-white hover:bg-white/10 text-lg font-bold cursor-pointer">−</button>
+        <div style={{ width: 24, height: 2, background: "#1e2840", margin: "2px 0" }} />
+        <button
+          onClick={() => setZoom((z) => Math.min(3, z + 0.05))}
+          style={{ width: 32, height: 32, background: "#0a0b16", border: "2px solid #2a3a50", color: "#5a8cff", fontSize: 16, cursor: "pointer", fontWeight: "bold" }}
+        >+</button>
+        <button
+          onClick={resetView}
+          style={{ width: 32, height: 24, background: "#0a0b16", border: "2px solid #2a3a50", color: "#445566", fontSize: 7, cursor: "pointer", fontFamily: "'Press Start 2P', monospace" }}
+        >{Math.round(zoom * 100)}%</button>
+        <button
+          onClick={() => setZoom((z) => Math.max(0.5, z - 0.05))}
+          style={{ width: 32, height: 32, background: "#0a0b16", border: "2px solid #2a3a50", color: "#5a8cff", fontSize: 16, cursor: "pointer", fontWeight: "bold" }}
+        >−</button>
       </div>
 
       {/* Saiyan auto-popup cards — prefer right, left only at edge */}
@@ -608,30 +742,40 @@ export const MissionControl = memo(function MissionControl({
       )}
 
       {/* Bottom stats */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-6 px-6 py-2 rounded-xl bg-black/40 backdrop-blur border border-white/[0.04]">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-yellow-400" />
-          <strong className="text-yellow-400 text-xs">{busyCount}</strong>
-          <span className="text-[10px] text-white/50">busy</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          <strong className="text-emerald-400 text-xs">{readyCount}</strong>
-          <span className="text-[10px] text-white/50">ready</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-white/30" />
-          <strong className="text-white/50 text-xs">{idleCount}</strong>
-          <span className="text-[10px] text-white/50">idle</span>
-        </span>
-        <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${Math.min(100, (busyCount / Math.max(1, agents.length)) * 100)}%`,
-              background: busyCount > 5 ? "#ef5350" : busyCount > 2 ? "#fdd835" : "#4caf50",
-            }}
-          />
+      <div style={{
+        position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
+        display: "flex", alignItems: "center", gap: 16,
+        background: "#0a0b16",
+        border: "2px solid #1e2840",
+        boxShadow: "4px 4px 0 #000",
+        padding: "8px 20px",
+        fontFamily: "'Press Start 2P', monospace",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 8, height: 8, background: "#fdd835", animation: "agent-pulse 1s infinite" }} />
+          <span style={{ fontSize: 14, color: "#fdd835", fontWeight: "bold" }}>{busyCount}</span>
+          <span style={{ fontSize: 8, color: "#445566" }}>BUSY</span>
+        </div>
+        <div style={{ width: 2, height: 24, background: "#1e2840" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 8, height: 8, background: "#4caf50" }} />
+          <span style={{ fontSize: 14, color: "#4caf50", fontWeight: "bold" }}>{readyCount}</span>
+          <span style={{ fontSize: 8, color: "#445566" }}>READY</span>
+        </div>
+        <div style={{ width: 2, height: 24, background: "#1e2840" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 8, height: 8, background: "#445566" }} />
+          <span style={{ fontSize: 14, color: "#445566", fontWeight: "bold" }}>{idleCount}</span>
+          <span style={{ fontSize: 8, color: "#2a3a50" }}>IDLE</span>
+        </div>
+        <div style={{ width: 2, height: 24, background: "#1e2840" }} />
+        <div style={{ width: 80, height: 8, background: "#1a2030" }}>
+          <div style={{
+            height: "100%",
+            width: `${Math.min(100, (busyCount / Math.max(1, agents.length)) * 100)}%`,
+            background: busyCount > 5 ? "#ff6040" : busyCount > 2 ? "#fdd835" : "#4caf50",
+            transition: "width 0.7s ease",
+          }} />
         </div>
       </div>
     </div>

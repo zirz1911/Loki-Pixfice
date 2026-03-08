@@ -12,27 +12,28 @@ interface AgentCardProps {
 export const AgentCard = memo(function AgentCard({ agent, accent, saiyan, onClick }: AgentCardProps) {
   const [hovered, setHovered] = useState(false);
   const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ");
+
   return (
     <div
-      className="relative flex flex-col items-center gap-1 cursor-pointer"
+      className="relative flex flex-col items-center gap-1"
+      style={{ cursor: 'pointer' }}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* viewBox: x=-4 y=-16 w=40 h=64  (sprite 32×38 + emoji above + glow below) */}
-      <svg width={90} height={90} viewBox="-4 -16 40 64" style={{ overflow: "visible", imageRendering: "pixelated" }}>
-        <AgentAvatar
-          name={agent.name}
-          target={agent.target}
-          status={agent.status}
-          preview={agent.preview}
-          accent={accent}
-          saiyan={saiyan}
-          onClick={onClick}
-        />
-      </svg>
+      {/* AgentAvatar is now HTML (CSS box-shadow pixel art), no SVG wrapper needed */}
+      <AgentAvatar
+        name={agent.name}
+        target={agent.target}
+        status={agent.status}
+        preview={agent.preview}
+        accent={accent}
+        saiyan={saiyan}
+        onClick={onClick}
+      />
+
       <span
-        className="text-[7px] font-bold truncate max-w-[90px] text-center leading-tight"
+        className="text-[7px] font-bold truncate max-w-[80px] text-center leading-tight mt-1"
         style={{ color: accent, fontFamily: "'Press Start 2P', monospace" }}
       >
         {displayName}

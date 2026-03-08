@@ -23,7 +23,7 @@ export const EditToolbar = memo(function EditToolbar({ editMode, placingType, on
         zIndex: 30, display: 'flex', gap: 6, alignItems: 'center',
         background: '#16202e',
         border: `2px solid ${editMode ? '#5a8cff' : '#2a3a4e'}`,
-        padding: '6px 10px',
+        padding: '8px 14px',
         fontFamily: "'Press Start 2P', monospace",
         boxShadow: `4px 4px 0 #0a0a14${editMode ? ', 0 0 20px #5a8cff28' : ''}`,
         pointerEvents: 'auto',
@@ -35,7 +35,7 @@ export const EditToolbar = memo(function EditToolbar({ editMode, placingType, on
           background: editMode ? '#5a8cff' : '#1e2c3e',
           border: `2px solid ${editMode ? '#8aacff' : '#3a4e6a'}`,
           color: editMode ? '#1e1e2e' : '#5a8cff',
-          fontFamily: 'inherit', fontSize: '7px', padding: '4px 10px',
+          fontFamily: 'inherit', fontSize: '9px', padding: '6px 14px',
           cursor: 'pointer', letterSpacing: '1px',
         }}
       >
@@ -61,7 +61,7 @@ export const EditToolbar = memo(function EditToolbar({ editMode, placingType, on
             </button>
           ))}
           <div style={{ width: 1, height: 22, background: '#2a3a4e', margin: '0 2px' }} />
-          <span style={{ color: '#6a7a9a', fontSize: '6px', lineHeight: 1.6, maxWidth: 140 }}>
+          <span style={{ color: '#6a7a9a', fontSize: '8px', lineHeight: 1.6, maxWidth: 160 }}>
             {placingType
               ? `CLICK TO PLACE\nESC TO CANCEL`
               : `DRAG TO MOVE\nRIGHT-CLICK DELETE`}

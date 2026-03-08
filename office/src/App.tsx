@@ -1,10 +1,12 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useSessions } from "./hooks/useSessions";
-import { UniverseBg } from "./components/UniverseBg";
+import { useMessages } from "./hooks/useMessages";
+import { PixelOfficeView } from "./components/PixelOfficeView";
 import { GameCanvas } from "./components/GameCanvas";
 import { StatusBar } from "./components/StatusBar";
 import { EditToolbar } from "./components/EditToolbar";
+import { UniverseBg } from "./components/UniverseBg";
 import { TerminalModal } from "./components/TerminalModal";
 import { MissionControl } from "./components/MissionControl";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
@@ -22,15 +24,11 @@ function useHashRoute() {
   return hash;
 }
 
-/** Unlock audio on first user interaction — small tick to confirm */
 function useAudioUnlock() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     const handler = () => {
-      if (!isAudioUnlocked()) {
-        unlockAudio();
-        setReady(true);
-      }
+      if (!isAudioUnlocked()) { unlockAudio(); setReady(true); }
     };
     window.addEventListener("click", handler, { once: true });
     window.addEventListener("keydown", handler, { once: true });
@@ -52,7 +50,7 @@ export function App() {
   const [editMode, setEditMode] = useState(false);
   const [placingType, setPlacingType] = useState<FurnitureType | null>(null);
 
-  // "?" key opens shortcut overlay; Escape cancels placing mode
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") { setPlacingType(null); return; }
@@ -62,40 +60,36 @@ export function App() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Triple-tap to open shortcuts (mobile)
+  // Triple-tap for shortcuts (mobile)
   const tapCount = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
     const handler = () => {
       tapCount.current++;
       clearTimeout(tapTimer.current);
-      if (tapCount.current >= 3) {
-        tapCount.current = 0;
-        setShowShortcuts(true);
-      } else {
-        tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 400);
-      }
+      if (tapCount.current >= 3) { tapCount.current = 0; setShowShortcuts(true); }
+      else tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 400);
     };
     window.addEventListener("touchend", handler);
     return () => { window.removeEventListener("touchend", handler); clearTimeout(tapTimer.current); };
   }, []);
+
   const { sessions, agents, saiyanTargets, handleMessage } = useSessions();
   const { connected, send } = useWebSocket(handleMessage);
+  const { msgs } = useMessages(agents);
 
   const onSelectAgent = useCallback((agent: AgentState) => {
     setSelectedAgent(agent);
     send({ type: "select", target: agent.target });
   }, [send]);
 
-  // Agents in the same session as the selected agent
-  const siblings = useMemo(() => {
-    if (!selectedAgent) return [];
-    return agents.filter(a => a.session === selectedAgent.session);
-  }, [agents, selectedAgent]);
+  const siblings = selectedAgent
+    ? agents.filter((a) => a.session === selectedAgent.session)
+    : [];
 
   const onNavigate = useCallback((dir: -1 | 1) => {
     if (!selectedAgent || siblings.length <= 1) return;
-    const idx = siblings.findIndex(a => a.target === selectedAgent.target);
+    const idx = siblings.findIndex((a) => a.target === selectedAgent.target);
     const next = siblings[(idx + dir + siblings.length) % siblings.length];
     setSelectedAgent(next);
     send({ type: "select", target: next.target });
@@ -112,50 +106,83 @@ export function App() {
     />
   );
 
-  if (route === "mission") {
+  const shortcutOverlay = showShortcuts && (
+    <ShortcutOverlay onClose={() => setShowShortcuts(false)} />
+  );
+
+  // ── Route: #office (default) — new pixel office room grid ─────────────────
+  if (route === "office" || route === "") {
     return (
-      <div className="relative min-h-screen" style={{ background: "#020208" }}>
-        <div className="relative z-10">
-          <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="mission" />
-        </div>
-        <MissionControl
+      <>
+        <PixelOfficeView
           sessions={sessions}
           agents={agents}
-          saiyanTargets={saiyanTargets}
+          msgs={msgs}
           connected={connected}
           send={send}
           onSelectAgent={onSelectAgent}
         />
         {terminalModal}
-        {showShortcuts && <ShortcutOverlay onClose={() => setShowShortcuts(false)} />}
+        {shortcutOverlay}
+      </>
+    );
+  }
+
+  // ── Route: #mission — galaxy map view ──────────────────────────────────────
+  if (route === "mission") {
+    return (
+      <div style={{ position: "relative", height: "100vh", width: "100vw", overflow: "hidden", background: "#060614" }}>
+        <UniverseBg />
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
+          <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="mission" />
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <MissionControl
+              sessions={sessions}
+              agents={agents}
+              saiyanTargets={saiyanTargets}
+              connected={connected}
+              send={send}
+              onSelectAgent={onSelectAgent}
+            />
+          </div>
+        </div>
+        {terminalModal}
+        {shortcutOverlay}
       </div>
     );
   }
 
-  return (
-    <div className="relative min-h-screen">
-      <UniverseBg />
-      <GameCanvas
-        sessions={sessions} agents={agents}
-        saiyanTargets={saiyanTargets} onSelectAgent={onSelectAgent}
-        editMode={editMode} placingType={placingType}
-        onPlacingDone={() => setPlacingType(null)}
-      />
-      <div className="relative z-10" style={{ pointerEvents: 'none' }}>
-        <div style={{ pointerEvents: 'auto' }}>
-          <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="office" />
-        </div>
-      </div>
-      <div style={{ pointerEvents: 'none', position: 'fixed', inset: 0, zIndex: 20 }}>
-        <EditToolbar
-          editMode={editMode}
-          placingType={placingType}
-          onToggleEdit={() => { setEditMode(v => !v); setPlacingType(null); }}
-          onSelectPlacing={setPlacingType}
+  // ── Route: #game — canvas pixel art game view ──────────────────────────────
+  if (route === "game") {
+    return (
+      <div style={{ position: "relative", height: "100vh", width: "100vw", overflow: "hidden", background: "#060614" }}>
+        <UniverseBg />
+        <GameCanvas
+          sessions={sessions} agents={agents}
+          saiyanTargets={saiyanTargets} onSelectAgent={onSelectAgent}
+          editMode={editMode} placingType={placingType}
+          onPlacingDone={() => setPlacingType(null)}
         />
+        <div style={{ position: "relative", zIndex: 10, pointerEvents: "none" }}>
+          <div style={{ pointerEvents: "auto" }}>
+            <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="game" />
+          </div>
+        </div>
+        <div style={{ pointerEvents: "none", position: "fixed", inset: 0, zIndex: 20 }}>
+          <EditToolbar
+            editMode={editMode}
+            placingType={placingType}
+            onToggleEdit={() => { setEditMode((v) => !v); setPlacingType(null); }}
+            onSelectPlacing={setPlacingType}
+          />
+        </div>
+        {!editMode && terminalModal}
+        {shortcutOverlay}
       </div>
-      {!editMode && terminalModal}
-      {showShortcuts && <ShortcutOverlay onClose={() => setShowShortcuts(false)} />}
-    </div>
-  );
+    );
+  }
+
+  // Fallback → redirect to office
+  window.location.hash = "office";
+  return null;
 }

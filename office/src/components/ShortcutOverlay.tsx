@@ -28,7 +28,6 @@ const SHORTCUTS = [
 ] as const;
 
 export const ShortcutOverlay = memo(function ShortcutOverlay({ onClose }: ShortcutOverlayProps) {
-  // Capture Escape/Enter at window level, stop propagation so nothing underneath reacts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" || e.key === "Enter") {
@@ -38,33 +37,69 @@ export const ShortcutOverlay = memo(function ShortcutOverlay({ onClose }: Shortc
         onClose();
       }
     };
-    window.addEventListener("keydown", handler, true); // capture phase
+    window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
   }, [onClose]);
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      style={{
+        position: "fixed", inset: 0, zIndex: 60,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(0,0,0,0.80)",
+        fontFamily: "'Press Start 2P', monospace",
+        imageRendering: "pixelated",
+      }}
       onClick={onClose}
     >
       <div
-        className="rounded-xl border border-white/[0.08] p-6 max-w-md w-full"
-        style={{ background: "#0a0a0f" }}
+        style={{
+          background: "#07080f",
+          border: "2px solid #5a8cff",
+          boxShadow: "0 0 20px #5a8cff30, 6px 6px 0 #000",
+          padding: "24px 28px",
+          maxWidth: 480,
+          width: "90vw",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-center text-white/60 text-xs tracking-[4px] uppercase font-mono mb-5">Keyboard Shortcuts</h2>
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          borderBottom: "2px solid #1e2840",
+          paddingBottom: 14, marginBottom: 18,
+        }}>
+          <div style={{ width: 8, height: 8, background: "#5a8cff", animation: "pixel-glow 2s infinite" }} />
+          <span style={{ fontSize: 10, color: "#5a8cff", letterSpacing: 3 }}>KEYBOARD SHORTCUTS</span>
+        </div>
 
-        <div className="flex flex-col gap-5">
+        {/* Sections */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {SHORTCUTS.map(([section, keys]) => (
             <div key={section as string}>
-              <h3 className="text-[10px] text-cyan-400/60 tracking-[3px] uppercase font-mono mb-2">{section as string}</h3>
-              <div className="flex flex-col gap-1.5">
+              <div style={{
+                fontSize: 8, color: "#22d3ee", letterSpacing: 2,
+                marginBottom: 10, paddingBottom: 4,
+                borderBottom: "1px solid #22d3ee20",
+              }}>
+                {(section as string).toUpperCase()}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {(keys as readonly (readonly [string, string])[]).map(([key, desc]) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <kbd className="shrink-0 min-w-[90px] text-right px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/70 font-mono">
+                  <div key={key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      minWidth: 100, textAlign: "right",
+                      background: "#1a2030",
+                      border: "1px solid #2a3a50",
+                      padding: "3px 8px",
+                      fontSize: 9,
+                      color: "#e0e8ff",
+                      fontFamily: "monospace",
+                      flexShrink: 0,
+                    }}>
                       {key}
-                    </kbd>
-                    <span className="text-[11px] text-white/40 font-mono">{desc}</span>
+                    </div>
+                    <span style={{ fontSize: 8, color: "#5a6a80" }}>{desc}</span>
                   </div>
                 ))}
               </div>
@@ -72,12 +107,22 @@ export const ShortcutOverlay = memo(function ShortcutOverlay({ onClose }: Shortc
           ))}
         </div>
 
-        <div className="mt-5 flex items-center justify-center gap-4">
+        {/* Footer */}
+        <div style={{ marginTop: 22, borderTop: "1px solid #1e2840", paddingTop: 14, display: "flex", justifyContent: "center" }}>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/50 hover:text-white/80 hover:bg-white/10 cursor-pointer font-mono transition-colors"
+            style={{
+              background: "#0e1828",
+              border: "2px solid #2a3a50",
+              color: "#5a8cff",
+              fontSize: 9,
+              fontFamily: "'Press Start 2P', monospace",
+              padding: "8px 20px",
+              cursor: "pointer",
+              letterSpacing: 1,
+            }}
           >
-            Esc · Close
+            ESC · CLOSE
           </button>
         </div>
       </div>

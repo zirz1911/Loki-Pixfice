@@ -8,79 +8,104 @@ interface StatusBarProps {
 }
 
 const NAV_ITEMS = [
-  { href: "/office/#office",  label: "Office",   id: "office"   },
-  { href: "/office/#mission", label: "Mission",  id: "mission"  },
-  { href: "/",                label: "Terminal", id: "terminal" },
+  { href: "/office/#office",  label: "OFFICE",   id: "office"   },
+  { href: "/office/#mission", label: "MISSION",  id: "mission"  },
+  { href: "/office/#game",    label: "GAME",     id: "game"     },
+  { href: "/",                label: "TERMINAL", id: "terminal" },
 ];
 
-export const StatusBar = memo(function StatusBar({ connected, agentCount, sessionCount, activeView = "office" }: StatusBarProps) {
+const VIEW_TITLE: Record<string, string> = {
+  office:  "LOKI PIXFICE",
+  mission: "MISSION CTL",
+  game:    "GAME VIEW",
+};
+
+export const StatusBar = memo(function StatusBar({
+  connected,
+  agentCount,
+  sessionCount,
+  activeView = "office",
+}: StatusBarProps) {
+  const title = VIEW_TITLE[activeView] ?? "LOKI PIXFICE";
+
   return (
-    <header
-      className="sticky top-0 z-20 flex items-center gap-4 mx-4 mt-4 px-4 py-3"
+    <div
       style={{
-        background: '#16202e',
-        border: '2px solid #5a8cff',
-        boxShadow: '4px 4px 0 0 rgba(0,0,0,0.9), 0 0 12px #5a8cff30',
+        background: "#0a0b16",
+        borderBottom: "2px solid #1e2840",
+        padding: "10px 20px",
+        display: "flex",
+        alignItems: "center",
+        gap: 18,
+        flexShrink: 0,
         fontFamily: "'Press Start 2P', monospace",
+        imageRendering: "pixelated",
+        zIndex: 10,
+        position: "relative",
       }}
     >
-      {/* Status pixel */}
+      {/* Pixel logo */}
       <div style={{
-        width: 8, height: 8,
-        background: '#5a8cff',
-        boxShadow: '0 0 6px #5a8cff80',
-        flexShrink: 0,
-        animation: 'pixel-glow 2s ease-in-out infinite',
+        width: 10, height: 10, background: "#5a8cff", flexShrink: 0,
+        boxShadow: "0 0 8px #5a8cff80",
+        animation: "pixel-glow 2s ease-in-out infinite",
       }} />
 
       {/* Title */}
-      <h1
-        className="text-[10px] font-bold"
-        style={{ color: '#5a8cff', letterSpacing: '3px', textShadow: '2px 2px 0 #0a0a14' }}
-      >
-        {activeView === "mission" ? "MISSION CTL" : "LOKI PIXFICE"}
-      </h1>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={{ fontSize: 14, color: "#5a8cff", letterSpacing: 3 }}>{title}</span>
+        <span style={{ fontSize: 7, color: "#2a3a60", letterSpacing: 2 }}>HEADQUARTERS</span>
+      </div>
 
-      <div className="ml-auto flex items-center gap-4">
+      <div style={{ width: 2, height: 36, background: "#1e2840", flexShrink: 0 }} />
 
-        {/* Connection */}
-        <div className="flex items-center gap-2">
-          <div style={{
-            width: 8, height: 8,
-            background: connected ? '#5ac88c' : '#ff6b6b',
-            boxShadow: connected ? '0 0 6px #5ac88c80' : 'none',
-            animation: connected ? 'pixel-glow 2s ease-in-out infinite' : 'agent-pulse 0.8s ease-in-out infinite',
-          }} />
-          <span className="text-[7px]" style={{ color: connected ? '#5ac88c' : '#ff6b6b' }}>
-            {connected ? 'LIVE' : '...'}
-          </span>
-        </div>
+      {/* Counters */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+        <span style={{ fontSize: 22, color: "#8090c0", fontWeight: "bold", lineHeight: 1 }}>{agentCount}</span>
+        <span style={{ fontSize: 7, color: "#445566" }}>AGENTS</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+        <span style={{ fontSize: 22, color: "#5a8cff", fontWeight: "bold", lineHeight: 1 }}>{sessionCount}</span>
+        <span style={{ fontSize: 7, color: "#445566" }}>ROOMS</span>
+      </div>
 
-        {/* Counters */}
-        <span className="text-[7px]" style={{ color: '#5a8cff' }}>
-          {agentCount} agents
-        </span>
-        <span className="text-[7px]" style={{ color: '#6a7a9a' }}>
-          {sessionCount} sessions
-        </span>
+      <div style={{ flex: 1 }} />
 
-        {/* Nav */}
+      {/* Nav links */}
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
         {NAV_ITEMS.map((item) => (
           <a
             key={item.id}
             href={item.href}
-            className="text-[7px]"
             style={{
-              color: activeView === item.id ? '#5a8cff' : '#6a7a9a',
-              textDecoration: 'none',
-              borderBottom: activeView === item.id ? '2px solid #5a8cff' : 'none',
-              paddingBottom: '2px',
+              fontSize: 10,
+              fontFamily: "'Press Start 2P', monospace",
+              color: activeView === item.id ? "#5a8cff" : "#5a6a80",
+              textDecoration: "none",
+              borderBottom: activeView === item.id ? "2px solid #5a8cff" : "2px solid transparent",
+              paddingBottom: 3,
+              letterSpacing: 1,
+              transition: "color 0.15s",
             }}
           >
-            {item.label.toUpperCase()}
+            {item.label}
           </a>
         ))}
       </div>
-    </header>
+
+      <div style={{ width: 2, height: 36, background: "#1e2840", flexShrink: 0 }} />
+
+      {/* Connection */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <div style={{
+          width: 10, height: 10,
+          background: connected ? "#4caf50" : "#ff6b6b",
+          animation: connected ? "pixel-glow 2s ease-in-out infinite" : "agent-pulse 0.8s ease-in-out infinite",
+        }} />
+        <span style={{ fontSize: 9, color: connected ? "#4caf50" : "#ff6b6b" }}>
+          {connected ? "LIVE" : "DISC"}
+        </span>
+      </div>
+    </div>
   );
 });
