@@ -1,281 +1,143 @@
 import { memo } from "react";
-import { agentColor, agentEmoji } from "../lib/constants";
+import { agentEmoji } from "../lib/constants";
 import type { PaneStatus } from "../lib/types";
 
-const STATUS_FX: Record<PaneStatus, { color: string; aura: number; sparkle: boolean; typing: boolean }> = {
-  ready: { color: "#4caf50", aura: 1, sparkle: false, typing: false },
-  busy:  { color: "#fdd835", aura: 2, sparkle: true, typing: true },
-  idle:  { color: "#666",    aura: 0, sparkle: false, typing: false },
+// ── Pixel sprite: 16 cols × 19 rows, pixel size PS ───────────────────────────
+// Key: 0=transparent H=hair S=skin E=eyewhite P=pupil M=mouthcorner W=mouthopen
+//      C=clothes A=accent L=legs B=boots
+const SPRITE: string[] = [
+  '0000HHHHHHHH0000',  // 0  hair top
+  '000HHHHHHHHHH000',  // 1  hair
+  '000HSSSSSSSSSH00',  // 2  forehead
+  '00HSSSSSSSSSSSH0',  // 3  face top
+  '00HSEPPSEPSSSH00',  // 4  eyes
+  '00HSSSSSSSSSSSH0',  // 5  face mid
+  '00HSSSMWWMSSSH00',  // 6  mouth
+  '00HSSSSSSSSSH000',  // 7  chin
+  '000SSSSSSSS00000',  // 8  neck
+  '00CCCSSSSCCC0000',  // 9  collar
+  '0CCCCCCCCCCCCC00',  // 10 shoulders
+  '1CCCCCCCCCCCCC00',  // 11 torso
+  '0CAAACCCCAAACCC0',  // 12 torso detail
+  '0CCCCCCCCCCCCC00',  // 13 waist
+  '00LLLLCCCLLLL000',  // 14 upper legs
+  '000LLLL0LLLLL000',  // 15 legs
+  '000LLLL0LLLLL000',  // 16 lower legs
+  '000BBBB0BBBBB000',  // 17 boots
+  '00BBBBB00BBBBB00',  // 18 boots bottom
+];
+
+interface Palette { H:string; S:string; E:string; P:string; M:string; W:string; C:string; A:string; L:string; B:string; }
+
+const PALETTES: Record<string, Palette> = {
+  default:  { H:'#6b3a2a', S:'#fde2c8', E:'#ffffff', P:'#2c1b0e', M:'#6b3030', W:'#e0c08a', C:'#4a7a2c', A:'#6aaa4c', L:'#4060a0', B:'#2a3070' },
+  odin:     { H:'#c8a830', S:'#d4956b', E:'#ffffff', P:'#1a1008', M:'#603020', W:'#e0c080', C:'#1e1040', A:'#f5c518', L:'#2c1848', B:'#180830' },
+  thor:     { H:'#d4b050', S:'#fde2c8', E:'#ffffff', P:'#1a1040', M:'#503020', W:'#fae8c8', C:'#2050a8', A:'#4fc3f7', L:'#183080', B:'#102060' },
+  loki:     { H:'#1a0a30', S:'#c88060', E:'#ffffff', P:'#3a1060', M:'#501840', W:'#d0a0b0', C:'#5a2080', A:'#c060e0', L:'#3a1060', B:'#200840' },
+  heimdall: { H:'#d4c080', S:'#fde2c8', E:'#ffffff', P:'#103830', M:'#305040', W:'#e8f0e8', C:'#1a6858', A:'#40d0b0', L:'#0e3838', B:'#082828' },
+  tyr:      { H:'#802020', S:'#fde2c8', E:'#ffffff', P:'#401010', M:'#601010', W:'#f0d0d0', C:'#802020', A:'#ff6060', L:'#601010', B:'#400808' },
+  ymir:     { H:'#a0c0d8', S:'#c0d8f0', E:'#90b8d0', P:'#304858', M:'#4a6878', W:'#d0e8f8', C:'#4878a0', A:'#90d0f8', L:'#305070', B:'#203040' },
 };
 
-interface AgentAvatarProps {
-  name: string;
-  target: string;
-  status: PaneStatus;
-  preview: string;
-  accent: string;
-  saiyan?: boolean;
-  onClick: () => void;
-}
+const STATUS_FX: Record<PaneStatus, { glow: string; anim: string; sparkle: boolean }> = {
+  ready: { glow: '#4caf50', anim: 'pixel-idle 2s ease-in-out infinite', sparkle: false },
+  busy:  { glow: '#fdd835', anim: 'pixel-bob 0.35s ease-in-out infinite', sparkle: true },
+  idle:  { glow: '#555',    anim: 'none',                                  sparkle: false },
+};
 
-export const AgentAvatar = memo(function AgentAvatar({ name, target, status, preview, accent, saiyan, onClick }: AgentAvatarProps) {
-  const color = agentColor(name);
+const PS = 2; // SVG units per sprite pixel (sprite = 32×38)
+
+interface Props { name: string; target: string; status: PaneStatus; preview: string; accent: string; saiyan?: boolean; onClick: () => void; }
+
+export const AgentAvatar = memo(function AgentAvatar({ name, target, status, preview, accent, saiyan, onClick }: Props) {
+  const key = name.toLowerCase().replace(/-oracle$/, '');
+  const pk  = Object.keys(PALETTES).find(k => k !== 'default' && key.startsWith(k)) ?? 'default';
+  const pal = PALETTES[pk];
   const emoji = agentEmoji(name);
   const fx = STATUS_FX[status];
-  const filterId = `glow-${target.replace(/[^a-z0-9]/gi, "-")}`;
-  const auraId = `aura-${target.replace(/[^a-z0-9]/gi, "-")}`;
+  const filterId = `glow-${target.replace(/[^a-z0-9]/gi, '-')}`;
 
-  const displayName = name.replace(/-oracle$/, "").replace(/-/g, " ");
-  const shortName = displayName.length > 10 ? displayName.slice(0, 10) + ".." : displayName;
+  const cmap: Record<string, string> = {
+    H: pal.H, S: pal.S, E: pal.E, P: pal.P,
+    M: pal.M, W: pal.W, C: pal.C, A: pal.A,
+    L: pal.L, B: pal.B,
+    '1': pal.C,
+  };
 
-  // Deterministic features from name hash
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
-  const hasEars = Math.abs(h) % 3 === 0; // cat ears
-  const hasAntenna = !hasEars && Math.abs(h) % 3 === 1; // antenna
-  const eyeStyle = Math.abs(h >> 4) % 3; // 0=round, 1=happy, 2=star
+  const SW = 16 * PS; // sprite width  = 32
+  const SH = 19 * PS; // sprite height = 38
 
   return (
-    <g
-      style={{ cursor: "pointer" }}
-      onClick={onClick}
-    >
+    <g style={{ cursor: 'pointer' }} onClick={onClick}>
       <defs>
-        <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+        <filter id={filterId} x="-80%" y="-80%" width="260%" height="260%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
         </filter>
-        <radialGradient id={auraId} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={fx.color} stopOpacity={0.3} />
-          <stop offset="70%" stopColor={fx.color} stopOpacity={0.05} />
-          <stop offset="100%" stopColor={fx.color} stopOpacity={0} />
-        </radialGradient>
       </defs>
 
-      {/* === LEVEL 2 AURA (busy — super saiyan) === */}
-      {fx.aura >= 2 && (
-        <>
-          <circle cx={0} cy={-6} r={42} fill="none" stroke={fx.color} strokeWidth={2}
-            opacity={0.2} style={{ animation: "saiyan-outer 2s ease-in-out infinite" }} />
-          <circle cx={0} cy={-6} r={36} fill={`url(#${auraId})`}
-            style={{ animation: "saiyan-aura 2s ease-in-out infinite" }} />
-          <rect x={-1.5} y={-65} width={3} height={30} rx={1} fill={fx.color} opacity={0.25}
-            style={{ animation: "agent-pulse 0.6s ease-in-out infinite" }} />
-          <ellipse cx={0} cy={24} rx={24} ry={6} fill="none" stroke={fx.color} strokeWidth={2}
-            opacity={0.35} style={{ animation: "agent-pulse 0.8s ease-in-out infinite" }} />
-        </>
+      {/* Ground shadow / glow */}
+      {status !== 'idle' && (
+        <ellipse cx={SW / 2} cy={SH + 5} rx={14} ry={4}
+          fill={fx.glow} opacity={0.4} filter={`url(#${filterId})`}
+          style={{ animation: 'pixel-glow 1.5s ease-in-out infinite' }} />
       )}
 
-      {/* === SAIYAN BURST (10s power-up) === */}
+      {/* Saiyan power ring */}
       {saiyan && (
-        <>
-          {/* Energy pillar — tall beam shooting upward */}
-          <rect x={-8} y={-120} width={16} height={150} rx={8}
-            fill={fx.color} opacity={0.12}
-            style={{ animation: "saiyan-pillar 1.5s ease-out forwards" }} />
-          <rect x={-3} y={-100} width={6} height={120} rx={3}
-            fill="#fff" opacity={0.08}
-            style={{ animation: "saiyan-pillar 1.5s ease-out 0.2s forwards" }} />
-
-          {/* Expanding shockwave rings */}
-          {[0, 0.6, 1.2, 3, 5, 7].map((delay, i) => (
-            <circle key={`ring-${i}`} cx={0} cy={-6} r={20}
-              fill="none" stroke={fx.color} strokeWidth={1.5}
-              opacity={0}
-              style={{ animation: `saiyan-ring 2s ease-out ${delay}s forwards` }} />
-          ))}
-
-          {/* Intense core glow */}
-          <circle cx={0} cy={-6} r={50}
-            fill={fx.color} opacity={0.06}
-            style={{ animation: "saiyan-glow 10s ease-out forwards" }} />
-
-          {/* Rising energy particles */}
-          {[
-            { x: -20, d: 0 }, { x: -10, d: 0.5 }, { x: 0, d: 1 },
-            { x: 10, d: 1.5 }, { x: 20, d: 2 }, { x: -15, d: 3 },
-            { x: 5, d: 4 }, { x: 15, d: 5 }, { x: -5, d: 6 },
-          ].map((p, i) => (
-            <circle key={`particle-${i}`} cx={p.x} cy={30} r={2}
-              fill={fx.color} opacity={0}
-              style={{ animation: `saiyan-particle 2s ease-out ${p.d}s forwards` }} />
-          ))}
-        </>
+        <circle cx={SW / 2} cy={SH / 2} r={30}
+          fill="none" stroke={fx.glow} strokeWidth={2} opacity={0.5}
+          style={{ animation: 'saiyan-ring 1.5s ease-out infinite' }} />
       )}
 
-      {/* === LEVEL 1 AURA (ready — subtle glow) === */}
-      {fx.aura === 1 && (
-        <>
-          <circle cx={0} cy={-6} r={28} fill={`url(#${auraId})`} />
-          <ellipse cx={0} cy={24} rx={18} ry={4} fill={fx.color} opacity={0.15} />
-        </>
-      )}
+      {/* Sprite body — animated */}
+      <g style={{ animation: fx.anim }}>
+        {SPRITE.map((row, ri) =>
+          row.split('').map((ch, ci) => {
+            if (ch === '0') return null;
+            const color = cmap[ch];
+            if (!color) return null;
+            return <rect key={`${ri}-${ci}`} x={ci * PS} y={ri * PS} width={PS} height={PS} fill={color} />;
+          })
+        )}
+      </g>
 
-      {/* === SPARKLES (busy) === */}
+      {/* Status pixel dot (top-right) */}
+      <rect x={SW - PS * 2} y={0} width={PS * 2} height={PS * 2} fill={fx.glow}
+        style={status === 'busy' ? { animation: 'agent-pulse 0.5s ease-in-out infinite' } : {}} />
+
+      {/* Busy sparkles */}
       {fx.sparkle && (
         <>
-          {[
-            { ox: -24, oy: -28, d: 0 }, { ox: 22, oy: -16, d: 0.4 },
-            { ox: -18, oy: 5, d: 0.8 }, { ox: 26, oy: -32, d: 1.2 },
-          ].map((s, i) => (
-            <g key={i} transform={`translate(${s.ox}, ${s.oy})`}
+          {[{ x: -8, y: 4, d: 0 }, { x: SW + 4, y: 8, d: 0.4 }, { x: -6, y: 16, d: 0.8 }, { x: SW + 2, y: 20, d: 1.2 }].map((s, i) => (
+            <g key={i} transform={`translate(${s.x},${s.y})`}
               style={{ animation: `sparkle 1.2s ease-in-out ${s.d}s infinite` }}>
-              <line x1={-3} y1={0} x2={3} y2={0} stroke={fx.color} strokeWidth={1.5} />
-              <line x1={0} y1={-3} x2={0} y2={3} stroke={fx.color} strokeWidth={1.5} />
+              <rect x={-2} y={0} width={4} height={2} fill={fx.glow} />
+              <rect x={0} y={-2} width={2} height={4} fill={fx.glow} />
             </g>
           ))}
         </>
       )}
 
-      {/* Ground shadow */}
-      <ellipse cx={0} cy={24} rx={16} ry={4}
-        fill={status === "idle" ? "#333" : fx.color}
-        opacity={status === "idle" ? 0.3 : 0.2} />
-
-      {/* === CHIBI BODY (small hoodie) === */}
-      <rect x={-12} y={6} width={24} height={18} rx={8}
-        fill={color} stroke="#fff" strokeWidth={1.5} opacity={0.9} />
-      {/* Hoodie pocket */}
-      <rect x={-6} y={14} width={12} height={5} rx={2} fill="#000" opacity={0.12} />
-
-      {/* === HEAD (big round) === */}
-      <circle cx={0} cy={-10} r={20} fill={color} stroke="#fff" strokeWidth={2} />
-
-      {/* Head energy overlay (busy) */}
-      {fx.aura >= 2 && (
-        <circle cx={0} cy={-10} r={20} fill={fx.color} opacity={0.15}
-          style={{ animation: "agent-pulse 1s ease-in-out infinite" }} />
-      )}
-
-      {/* Hair tuft */}
-      <ellipse cx={-4} cy={-28} rx={6} ry={4} fill={color}
-        stroke="#fff" strokeWidth={1} />
-      <ellipse cx={4} cy={-29} rx={5} ry={3} fill={color}
-        stroke="#fff" strokeWidth={1} />
-
-      {/* Cat ears */}
-      {hasEars && (
-        <>
-          <polygon points="-14,-24 -18,-36 -6,-28" fill={color} stroke="#fff" strokeWidth={1.5} />
-          <polygon points="14,-24 18,-36 6,-28" fill={color} stroke="#fff" strokeWidth={1.5} />
-          <polygon points="-13,-25 -16,-33 -8,-27" fill="#ffb4b4" opacity={0.4} />
-          <polygon points="13,-25 16,-33 8,-27" fill="#ffb4b4" opacity={0.4} />
-        </>
-      )}
-
-      {/* Antenna */}
-      {hasAntenna && (
-        <>
-          <line x1={0} y1={-30} x2={0} y2={-40} stroke="#888" strokeWidth={1.5} />
-          <circle cx={0} cy={-42} r={3} fill={fx.color}
-            style={fx.aura >= 2 ? { animation: "agent-pulse 0.5s ease-in-out infinite" } : {}} />
-        </>
-      )}
-
-      {/* === EYES === */}
-      {eyeStyle === 0 && (
-        <>
-          {/* Round sparkly eyes */}
-          <circle cx={-7} cy={-12} r={4.5} fill="#fff" />
-          <circle cx={7} cy={-12} r={4.5} fill="#fff" />
-          <circle cx={-6} cy={-12} r={2.5} fill="#222" />
-          <circle cx={8} cy={-12} r={2.5} fill="#222" />
-          {/* Sparkle */}
-          <circle cx={-5} cy={-13.5} r={1} fill="#fff" />
-          <circle cx={9} cy={-13.5} r={1} fill="#fff" />
-        </>
-      )}
-      {eyeStyle === 1 && (
-        <>
-          {/* Happy closed eyes ^_^ */}
-          <path d="M -10 -12 Q -7 -15 -4 -12" fill="none" stroke="#222" strokeWidth={1.8} strokeLinecap="round" />
-          <path d="M 4 -12 Q 7 -15 10 -12" fill="none" stroke="#222" strokeWidth={1.8} strokeLinecap="round" />
-        </>
-      )}
-      {eyeStyle === 2 && (
-        <>
-          {/* Star eyes */}
-          <circle cx={-7} cy={-12} r={4.5} fill="#fff" />
-          <circle cx={7} cy={-12} r={4.5} fill="#fff" />
-          <text x={-7} y={-9.5} textAnchor="middle" fill={color} fontSize={7} fontWeight="bold">*</text>
-          <text x={7} y={-9.5} textAnchor="middle" fill={color} fontSize={7} fontWeight="bold">*</text>
-        </>
-      )}
-
-      {/* Blush */}
-      <ellipse cx={-12} cy={-7} rx={3} ry={2} fill="#ff9999" opacity={0.25} />
-      <ellipse cx={12} cy={-7} rx={3} ry={2} fill="#ff9999" opacity={0.25} />
-
-      {/* Mouth */}
-      {status === "busy" ? (
-        <ellipse cx={0} cy={-4} rx={2.5} ry={2} fill="#333" />
-      ) : (
-        <path d="M -3 -5 Q 0 -2 3 -5" fill="none" stroke="#333" strokeWidth={1.2} strokeLinecap="round" />
-      )}
-
-      {/* === HEADPHONES === */}
-      <path d="M -17 -14 Q -18 -28 0 -30 Q 18 -28 17 -14" fill="none" stroke="#555" strokeWidth={2.5} />
-      <rect x={-20} y={-18} width={6} height={10} rx={3} fill="#444" stroke="#555" strokeWidth={1} />
-      <rect x={14} y={-18} width={6} height={10} rx={3} fill="#444" stroke="#555" strokeWidth={1} />
-
-      {/* Mic boom */}
-      <line x1={-19} y1={-10} x2={-14} y2={-2} stroke="#555" strokeWidth={1.2} />
-      <circle cx={-13} cy={-1} r={1.5} fill="#666" />
-
-      {/* Norse emoji badge (floating above head) */}
+      {/* Emoji badge above head */}
       {emoji && (
-        <text x={0} y={-46} textAnchor="middle" fontSize={14}
-          style={{ filter: `drop-shadow(0 0 4px ${color})` }}>
+        <text x={SW / 2} y={-4} textAnchor="middle" fontSize={12}
+          style={{ filter: `drop-shadow(0 0 3px ${pal.A})` }}>
           {emoji}
         </text>
       )}
 
-      {/* === ARMS === */}
-      {fx.typing ? (
-        <>
-          <g style={{ animation: "typing-arm 0.25s ease-in-out infinite" }}>
-            <line x1={-12} y1={10} x2={-22} y2={18} stroke={color} strokeWidth={3} strokeLinecap="round" />
-          </g>
-          <g style={{ animation: "typing-arm 0.25s ease-in-out 0.12s infinite" }}>
-            <line x1={12} y1={10} x2={22} y2={18} stroke={color} strokeWidth={3} strokeLinecap="round" />
-          </g>
-        </>
-      ) : (
-        <>
-          <line x1={-12} y1={10} x2={-16} y2={20} stroke={color} strokeWidth={3} strokeLinecap="round" />
-          <line x1={12} y1={10} x2={16} y2={20} stroke={color} strokeWidth={3} strokeLinecap="round" />
-        </>
-      )}
-
-      {/* === LEGS === */}
-      <line x1={-5} y1={23} x2={-6} y2={28} stroke={color} strokeWidth={2.5} strokeLinecap="round" />
-      <line x1={5} y1={23} x2={6} y2={28} stroke={color} strokeWidth={2.5} strokeLinecap="round" />
-      {/* Tiny shoes */}
-      <ellipse cx={-7} cy={29} rx={3.5} ry={2} fill="#333" />
-      <ellipse cx={7} cy={29} rx={3.5} ry={2} fill="#333" />
-
-      {/* Status dot */}
-      {status !== "idle" && (
-        <circle cx={16} cy={-28} r={5} fill={fx.color} opacity={0.4} filter={`url(#${filterId})`} />
-      )}
-      <circle cx={16} cy={-28} r={3.5} fill={fx.color} stroke="#1a1a1a" strokeWidth={1.5}
-        style={fx.aura >= 2 ? { animation: "agent-pulse 0.6s ease-in-out infinite" } : {}} />
-
-      {/* Name label removed — rendered as HTML in AgentCard */}
-
       {/* Floating code (busy) */}
-      {fx.typing && preview && (
-        <foreignObject x={-65} y={-70} width={130} height={20} style={{ pointerEvents: "none" }}>
+      {status === 'busy' && preview && (
+        <foreignObject x={-16} y={-26} width={64} height={14} style={{ pointerEvents: 'none' }}>
           <div style={{
-            animation: "float-code 3s ease-in-out infinite",
-            fontSize: "7px", color: accent, fontFamily: "'Courier New', monospace",
-            textAlign: "center", whiteSpace: "nowrap", overflow: "hidden",
-            textOverflow: "ellipsis", opacity: 0.7,
-            textShadow: `0 0 4px ${accent}`,
-          }}>{preview.slice(0, 45)}</div>
+            animation: 'float-code 3s ease-in-out infinite',
+            fontSize: '5px', color: accent,
+            fontFamily: "'Press Start 2P', monospace",
+            textAlign: 'center', whiteSpace: 'nowrap',
+            overflow: 'hidden', textOverflow: 'ellipsis', opacity: 0.9,
+          }}>{preview.slice(0, 18)}</div>
         </foreignObject>
       )}
-
-      {/* Tooltip rendered as HTML in AgentCard */}
     </g>
   );
 });

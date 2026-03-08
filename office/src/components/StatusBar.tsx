@@ -8,40 +8,68 @@ interface StatusBarProps {
 }
 
 const NAV_ITEMS = [
-  { href: "/office/#office", label: "Office", id: "office" },
-  { href: "/office/#mission", label: "Mission", id: "mission" },
-  { href: "/", label: "Terminal", id: "terminal" },
-  { href: "/dashboard", label: "Orbital", id: "orbital" },
+  { href: "/office/#office",   label: "Office",   id: "office"   },
+  { href: "/office/#mission",  label: "Mission",  id: "mission"  },
+  { href: "/",                 label: "Terminal", id: "terminal" },
 ];
 
 export const StatusBar = memo(function StatusBar({ connected, agentCount, sessionCount, activeView = "office" }: StatusBarProps) {
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-4 mx-6 mt-4 px-6 py-3 rounded-2xl bg-black/50 backdrop-blur-xl border border-white/[0.06] shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
-      <h1 className="text-lg font-bold tracking-[6px] text-cyan-400 uppercase">
-        {activeView === "mission" ? "Mission Control" : "Oracle Office"}
-      </h1>
-      <span className="text-[10px] text-white/40 tracking-[3px] hidden sm:inline">
-        {activeView === "mission" ? "oracle fleet overview" : "multi-agent workflow orchestra"}
-      </span>
+    <header
+      className="sticky top-0 z-20 flex items-center gap-4 mx-4 mt-4 px-4 py-3"
+      style={{
+        background: '#1a1008',
+        border: '4px solid #8b6340',
+        boxShadow: '4px 4px 0 0 rgba(0,0,0,0.7)',
+        fontFamily: "'Press Start 2P', monospace",
+        imageRendering: 'pixelated',
+      }}
+    >
+      {/* Title */}
+      <div className="flex items-center gap-2">
+        <div style={{ width: 12, height: 12, background: '#f5c518', flexShrink: 0 }} />
+        <h1 className="text-[10px] font-bold" style={{ color: '#f5c518', letterSpacing: '2px' }}>
+          {activeView === "mission" ? "MISSION CTL" : "LOKI PIXFICE"}
+        </h1>
+      </div>
 
-      <div className="ml-auto flex items-center gap-5 text-sm text-white/70">
-        <span className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-400 shadow-[0_0_6px_#4caf50]" : "bg-red-400 animate-pulse"}`} />
-          {connected ? "LIVE" : "RECONNECTING"}
+      <div className="ml-auto flex items-center gap-4">
+        {/* Connection status */}
+        <div className="flex items-center gap-2">
+          <div
+            style={{
+              width: 8, height: 8,
+              background: connected ? '#4caf50' : '#ef5350',
+              animation: connected ? 'none' : 'agent-pulse 0.8s ease-in-out infinite',
+            }}
+          />
+          <span className="text-[7px]" style={{ color: connected ? '#4caf50' : '#ef5350' }}>
+            {connected ? 'LIVE' : '...'}
+          </span>
+        </div>
+
+        {/* Counters */}
+        <span className="text-[7px]" style={{ color: '#4fc3f7' }}>
+          {agentCount} agents
         </span>
-        <span><strong className="text-cyan-400">{agentCount}</strong> agents</span>
-        <span><strong className="text-purple-400">{sessionCount}</strong> rooms</span>
+        <span className="text-[7px]" style={{ color: '#a855f7' }}>
+          {sessionCount} realms
+        </span>
+
+        {/* Nav */}
         {NAV_ITEMS.map((item) => (
           <a
             key={item.id}
             href={item.href}
-            className={`transition-colors ${
-              activeView === item.id
-                ? "text-cyan-400 font-bold"
-                : "text-white/50 hover:text-white/80"
-            }`}
+            className="text-[7px] transition-colors"
+            style={{
+              color: activeView === item.id ? '#f5c518' : '#8a7860',
+              textDecoration: 'none',
+              borderBottom: activeView === item.id ? '2px solid #f5c518' : 'none',
+              paddingBottom: '2px',
+            }}
           >
-            {item.label}
+            {item.label.toUpperCase()}
           </a>
         ))}
       </div>

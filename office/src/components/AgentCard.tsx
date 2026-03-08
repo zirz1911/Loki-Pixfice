@@ -19,7 +19,8 @@ export const AgentCard = memo(function AgentCard({ agent, accent, saiyan, onClic
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <svg width={100} height={85} viewBox="-55 -55 110 88" style={{ overflow: "visible" }}>
+      {/* viewBox: x=-4 y=-16 w=40 h=64  (sprite 32×38 + emoji above + glow below) */}
+      <svg width={90} height={90} viewBox="-4 -16 40 64" style={{ overflow: "visible", imageRendering: "pixelated" }}>
         <AgentAvatar
           name={agent.name}
           target={agent.target}
@@ -31,40 +32,33 @@ export const AgentCard = memo(function AgentCard({ agent, accent, saiyan, onClic
         />
       </svg>
       <span
-        className="text-[11px] font-bold tracking-wide truncate max-w-[100px] text-center"
-        style={{ color: accent }}
+        className="text-[7px] font-bold truncate max-w-[90px] text-center leading-tight"
+        style={{ color: accent, fontFamily: "'Press Start 2P', monospace" }}
       >
         {displayName}
       </span>
 
-      {/* HTML tooltip — positioned above card */}
+      {/* Pixel tooltip */}
       {hovered && (
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 px-4 py-2.5 rounded-xl border whitespace-nowrap pointer-events-none"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 px-3 py-2 whitespace-nowrap pointer-events-none"
           style={{
-            background: "rgba(8,8,16,0.95)",
-            borderColor: `${accent}44`,
-            boxShadow: `0 0 20px ${accent}25, 0 4px 12px rgba(0,0,0,0.5)`,
+            background: '#1a1008',
+            border: `4px solid ${accent}`,
+            boxShadow: `4px 4px 0 0 rgba(0,0,0,0.8)`,
+            fontFamily: "'Press Start 2P', monospace",
+            imageRendering: 'pixelated',
           }}
         >
-          <div className="text-sm font-bold" style={{ color: accent }}>{displayName}</div>
-          <div className="text-xs text-white/70 mt-0.5">
+          <div className="text-[8px] font-bold mb-1" style={{ color: accent }}>{displayName}</div>
+          <div className="text-[7px]" style={{ color: '#c8a870' }}>
             {agent.status} · {agent.target}
           </div>
           {agent.preview && (
-            <div className="text-[10px] text-white/50 mt-1 max-w-[250px] truncate">
-              {agent.preview.slice(0, 60)}
+            <div className="text-[6px] mt-1 max-w-[200px] truncate" style={{ color: '#8a7860' }}>
+              {agent.preview.slice(0, 50)}
             </div>
           )}
-          {/* Arrow */}
-          <div
-            className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0"
-            style={{
-              borderLeft: "6px solid transparent",
-              borderRight: "6px solid transparent",
-              borderTop: "6px solid rgba(8,8,16,0.95)",
-            }}
-          />
         </div>
       )}
     </div>

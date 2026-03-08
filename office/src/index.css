@@ -1,50 +1,67 @@
 @import "tailwindcss";
 
+:root {
+  --px-grass:      #5a8a3c;
+  --px-grass-dk:   #4a7a2c;
+  --px-grass-lt:   #6a9a4c;
+  --px-dirt:       #c8a96e;
+  --px-dirt-dk:    #a88848;
+  --px-wood:       #8b6340;
+  --px-wood-dk:    #6b4320;
+  --px-stone:      #8a7a6a;
+  --px-text:       #2c1810;
+  --px-text-lt:    #f5e8c8;
+  --px-gold:       #f5c518;
+  --px-sky:        #7ec8e3;
+  --px-water:      #4090c0;
+}
+
+* { image-rendering: pixelated; image-rendering: crisp-edges; }
+
 body {
-  background: #020208;
-  color: #e0e0e0;
-  font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+  background: var(--px-grass);
+  color: var(--px-text);
+  font-family: 'Press Start 2P', monospace;
   overflow-x: hidden;
+  font-size: 8px;
+  line-height: 2;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #020208; }
-::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 3px; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--px-wood-dk); }
+::-webkit-scrollbar-thumb { background: var(--px-wood); }
 
-/* Shared */
+/* Pixel box-shadow border utility */
+.pixel-border {
+  box-shadow:
+    0 -4px 0 0 var(--px-wood-dk),
+    0  4px 0 0 var(--px-wood-dk),
+   -4px 0 0 0 var(--px-wood-dk),
+    4px 0 0 0 var(--px-wood-dk);
+}
+
+/* Animations */
+@keyframes pixel-idle { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes pixel-bob  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes agent-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-@keyframes blink { 50% { opacity: 0; } }
-
-/* SVG chibi avatar animations */
-@keyframes saiyan-aura { 0% { r: 28; opacity: 0.5; } 50% { r: 40; opacity: 0.2; } 100% { r: 28; opacity: 0.5; } }
-@keyframes saiyan-outer { 0% { r: 38; opacity: 0.3; } 50% { r: 52; opacity: 0.08; } 100% { r: 38; opacity: 0.3; } }
-@keyframes typing-arm { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes float-code { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 0.7; } 80% { opacity: 0.7; } 100% { opacity: 0; transform: translateY(-30px); } }
-@keyframes sparkle { 0% { opacity: 0; transform: scale(0); } 50% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0); } }
-@keyframes room-pulse { 0%, 100% { stroke-opacity: 0.2; } 50% { stroke-opacity: 0.5; } }
-
-/* Saiyan burst (10s power-up) */
-@keyframes saiyan-pillar {
-  0% { opacity: 0.5; transform: scaleY(0); transform-origin: bottom; }
-  30% { opacity: 0.25; transform: scaleY(1); }
-  100% { opacity: 0; transform: scaleY(1); }
+@keyframes float-code {
+  0%   { opacity: 0; transform: translateY(0); }
+  20%  { opacity: 0.9; }
+  80%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(-24px); }
 }
-@keyframes saiyan-ring {
-  0% { r: 20; opacity: 0.7; stroke-width: 3; }
-  100% { r: 90; opacity: 0; stroke-width: 0.5; }
-}
-@keyframes saiyan-glow {
-  0% { r: 55; opacity: 0.25; }
-  20% { r: 65; opacity: 0.12; }
-  100% { r: 40; opacity: 0; }
-}
-@keyframes saiyan-particle {
-  0% { cy: 30; opacity: 1; r: 2.5; }
-  100% { cy: -90; opacity: 0; r: 0.5; }
-}
+@keyframes sparkle { 0%,100% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes pixel-glow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
 
-/* Hover preview card */
-@keyframes fadeSlideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-
-/* Terminal modal slide up */
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+/* Keep these for saiyan compat */
+@keyframes saiyan-aura    { 0%,100% { opacity: 0.5; } 50% { opacity: 0.2; } }
+@keyframes saiyan-outer   { 0%,100% { opacity: 0.3; } 50% { opacity: 0.08; } }
+@keyframes saiyan-ring    { 0% { opacity: 0.7; } 100% { opacity: 0; } }
+@keyframes saiyan-glow    { 0% { opacity: 0.25; } 100% { opacity: 0; } }
+@keyframes saiyan-particle { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes saiyan-pillar  { 0% { opacity: 0.5; } 100% { opacity: 0; } }
+@keyframes typing-arm     { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes room-pulse     { 0%,100% { stroke-opacity: 0.2; } 50% { stroke-opacity: 0.5; } }
+@keyframes fadeSlideIn    { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideUp        { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes blink          { 50% { opacity: 0; } }
