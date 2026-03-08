@@ -2,8 +2,8 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useSessions } from "./hooks/useSessions";
 import { UniverseBg } from "./components/UniverseBg";
+import { GameCanvas } from "./components/GameCanvas";
 import { StatusBar } from "./components/StatusBar";
-import { RoomGrid } from "./components/RoomGrid";
 import { TerminalModal } from "./components/TerminalModal";
 import { MissionControl } from "./components/MissionControl";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
@@ -132,9 +132,9 @@ export function App() {
   return (
     <div className="relative min-h-screen">
       <UniverseBg />
-      <div className="relative z-10">
+      <GameCanvas sessions={sessions} agents={agents} saiyanTargets={saiyanTargets} onSelectAgent={onSelectAgent} />
+      <div className="relative z-10" style={{ pointerEvents: 'none' }}>
         <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="office" />
-        <RoomGrid sessions={sessions} agents={agents} saiyanTargets={saiyanTargets} onSelectAgent={onSelectAgent} />
       </div>
       {terminalModal}
       {showShortcuts && <ShortcutOverlay onClose={() => setShowShortcuts(false)} />}
