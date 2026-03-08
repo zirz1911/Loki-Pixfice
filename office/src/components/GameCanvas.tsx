@@ -54,9 +54,11 @@ let _imgsLoaded = false;
 function preloadImages() {
   if (_imgsLoaded) return;
   _imgsLoaded = true;
+  // import.meta.env.BASE_URL = "/office/" (set in vite.config.ts)
+  const base = import.meta.env.BASE_URL ?? '/office/';
   for (let i = 0; i < 6; i++) {
     const img = new Image();
-    img.src = `/assets/characters/char_${i}.png`;
+    img.src = `${base}assets/characters/char_${i}.png`;
     IMAGES.set(i, img);
   }
 }
