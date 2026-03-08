@@ -1,25 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --px-grass:      #5a8a3c;
-  --px-grass-dk:   #4a7a2c;
-  --px-grass-lt:   #6a9a4c;
-  --px-dirt:       #c8a96e;
-  --px-dirt-dk:    #a88848;
-  --px-wood:       #8b6340;
-  --px-wood-dk:    #6b4320;
-  --px-stone:      #8a7a6a;
-  --px-text:       #2c1810;
-  --px-text-lt:    #f5e8c8;
-  --px-gold:       #f5c518;
-  --px-sky:        #7ec8e3;
-  --px-water:      #4090c0;
+  --px-sky:       #060310;
+  --px-sky-mid:   #0e0828;
+  --px-stone:     #383050;
+  --px-stone-lt:  #504870;
+  --px-stone-dk:  #1e1830;
+  --px-gold:      #f5c518;
+  --px-gold-dk:   #c9a020;
+  --px-gold-dim:  #806810;
+  --px-silver:    #c0c8e0;
+  --px-text:      #f0e8d0;
+  --px-text-dim:  #a09880;
+  --px-aurora-g:  #40ff90;
+  --px-aurora-b:  #4090ff;
+  --px-aurora-p:  #c040ff;
 }
 
 * { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 body {
-  background: var(--px-grass);
+  background: var(--px-sky);
   color: var(--px-text);
   font-family: 'Press Start 2P', monospace;
   overflow-x: hidden;
@@ -28,32 +29,24 @@ body {
 }
 
 ::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--px-wood-dk); }
-::-webkit-scrollbar-thumb { background: var(--px-wood); }
-
-/* Pixel box-shadow border utility */
-.pixel-border {
-  box-shadow:
-    0 -4px 0 0 var(--px-wood-dk),
-    0  4px 0 0 var(--px-wood-dk),
-   -4px 0 0 0 var(--px-wood-dk),
-    4px 0 0 0 var(--px-wood-dk);
-}
+::-webkit-scrollbar-track { background: var(--px-stone-dk); }
+::-webkit-scrollbar-thumb { background: var(--px-gold-dk); }
 
 /* Animations */
-@keyframes pixel-idle { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes pixel-bob  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes pixel-idle  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes pixel-bob   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes agent-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes pixel-glow  { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes aurora-shift { 0%,100% { opacity: 0.5; transform: translateX(0); } 50% { opacity: 0.8; transform: translateX(8px); } }
+@keyframes star-twinkle { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes gold-shimmer { 0%,100% { opacity: 0.8; } 50% { opacity: 1; } }
 @keyframes float-code {
   0%   { opacity: 0; transform: translateY(0); }
   20%  { opacity: 0.9; }
   80%  { opacity: 0.9; }
   100% { opacity: 0; transform: translateY(-24px); }
 }
-@keyframes sparkle { 0%,100% { opacity: 0; } 50% { opacity: 1; } }
-@keyframes pixel-glow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
-
-/* Keep these for saiyan compat */
+@keyframes sparkle     { 0%,100% { opacity: 0; } 50% { opacity: 1; } }
 @keyframes saiyan-aura    { 0%,100% { opacity: 0.5; } 50% { opacity: 0.2; } }
 @keyframes saiyan-outer   { 0%,100% { opacity: 0.3; } 50% { opacity: 0.08; } }
 @keyframes saiyan-ring    { 0% { opacity: 0.7; } 100% { opacity: 0; } }

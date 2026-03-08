@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const TILE = 8;
+const T = 8; // tile size in px
 
 function seedRand(seed: number) {
   let s = seed >>> 0;
@@ -12,125 +12,205 @@ function seedRand(seed: number) {
   };
 }
 
-function drawWorld(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  const cols = Math.ceil(w / TILE) + 1;
-  const rows = Math.ceil(h / TILE) + 1;
-  const rand = seedRand(0xdeadbeef);
+function drawAsgard(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const cols = Math.ceil(w / T) + 1;
+  const rows = Math.ceil(h / T) + 1;
+  const rand = seedRand(0xa57a4d0);
 
-  // ── Base grass ───────────────────────────────────────────────────────────
-  const GRASS = ['#5a8a3c', '#4a7a2c', '#6a9a4c', '#5a8a3c', '#5a8a3c'];
-  for (let r = 0; r < rows; r++) {
+  const horizonY = Math.floor(rows * 0.52); // sky / palace floor divide
+
+  // ── Cosmic sky ─────────────────────────────────────────────────────────────
+  for (let r = 0; r < horizonY; r++) {
+    const t = r / horizonY; // 0=top, 1=horizon
+    // Gradient: very dark purple → deep navy/indigo
+    const rr = Math.floor(6  + t * 14);
+    const gg = Math.floor(3  + t * 8);
+    const bb = Math.floor(16 + t * 40);
     for (let c = 0; c < cols; c++) {
-      ctx.fillStyle = GRASS[Math.floor(rand() * GRASS.length)];
-      ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+      ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
+      ctx.fillRect(c * T, r * T, T, T);
     }
   }
 
-  // ── Horizontal dirt path (top ~18%) ──────────────────────────────────────
-  const pathY = Math.floor(rows * 0.18);
-  for (let c = 0; c < cols; c++) {
-    for (let r = pathY; r < pathY + 3; r++) {
-      ctx.fillStyle = rand() < 0.35 ? '#b89858' : '#c8a96e';
-      ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-    }
-    // Edge shadows
-    ctx.fillStyle = '#a08040';
-    ctx.fillRect(c * TILE, pathY * TILE, TILE, 2);
-    ctx.fillRect(c * TILE, (pathY + 3) * TILE - 2, TILE, 2);
+  // ── Stars ──────────────────────────────────────────────────────────────────
+  const STAR_COLORS = ['#ffffff', '#e0e8ff', '#ffe0c0', '#c0d0ff'];
+  for (let i = 0; i < 300; i++) {
+    const sc = Math.floor(rand() * cols);
+    const sr = Math.floor(rand() * (horizonY - 2));
+    const size = rand() < 0.15 ? 2 : 1;
+    ctx.fillStyle = STAR_COLORS[Math.floor(rand() * STAR_COLORS.length)];
+    ctx.fillRect(sc * T + 3, sr * T + 3, size, size);
   }
 
-  // ── Stone path (vertical, left ~12%) ─────────────────────────────────────
-  const stoneX = Math.floor(cols * 0.12);
-  for (let r = 0; r < rows; r++) {
-    for (let c = stoneX; c < stoneX + 2; c++) {
-      ctx.fillStyle = rand() < 0.3 ? '#7a6a5a' : '#8a7a6a';
-      ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+  // ── Moon (top right) ───────────────────────────────────────────────────────
+  const moonX = Math.floor(cols * 0.82) * T;
+  const moonY = Math.floor(rows * 0.08) * T;
+  const moonR = T * 3;
+  // Full circle
+  ctx.fillStyle = '#e8f0ff';
+  for (let dy = -moonR; dy <= moonR; dy += 1) {
+    for (let dx = -moonR; dx <= moonR; dx += 1) {
+      if (dx * dx + dy * dy <= moonR * moonR) {
+        ctx.fillRect(moonX + dx, moonY + dy, 1, 1);
+      }
     }
   }
+  // Crater details
+  ctx.fillStyle = '#c8d4f0';
+  ctx.fillRect(moonX - 6, moonY - 4, 4, 4);
+  ctx.fillRect(moonX + 4, moonY + 2, 3, 3);
+  ctx.fillRect(moonX - 2, moonY + 6, 5, 3);
 
-  // ── Flowers ───────────────────────────────────────────────────────────────
-  const FLOWER_COLORS = ['#f5c518', '#e84040', '#ff80b0', '#80b0ff', '#ff9040'];
-  for (let i = 0; i < 120; i++) {
-    const fc = Math.floor(rand() * cols);
-    const fr = Math.floor(rand() * rows);
-    if (fr >= pathY - 1 && fr <= pathY + 3) continue;
-    if (fc >= stoneX - 1 && fc <= stoneX + 2) continue;
-    const color = FLOWER_COLORS[Math.floor(rand() * FLOWER_COLORS.length)];
-    // Stem
-    ctx.fillStyle = '#3a6a20';
-    ctx.fillRect(fc * TILE + 3, fr * TILE + 4, 2, 4);
-    // Petals
+  // ── Aurora borealis ────────────────────────────────────────────────────────
+  const AURORA = ['#40ff90', '#4090ff', '#c040ff', '#40e8ff', '#80ff40'];
+  for (let band = 0; band < 5; band++) {
+    const startC = Math.floor(rand() * cols);
+    const startR = Math.floor(rand() * (horizonY * 0.6));
+    const length = Math.floor(rand() * 30 + 20);
+    const color = AURORA[band % AURORA.length];
     ctx.fillStyle = color;
-    ctx.fillRect(fc * TILE + 1, fr * TILE + 1, 6, 4);
-    ctx.fillRect(fc * TILE + 2, fr * TILE, 4, 6);
-    // Center
-    ctx.fillStyle = '#f0d040';
-    ctx.fillRect(fc * TILE + 3, fr * TILE + 2, 2, 2);
+    for (let i = 0; i < length; i++) {
+      const c = (startC + i) % cols;
+      const r = startR + Math.floor(Math.sin(i * 0.3) * 3);
+      if (r >= 0 && r < horizonY) {
+        // Aurora is semi-transparent — draw as thin pixel strips
+        ctx.globalAlpha = 0.25 + Math.sin(i * 0.4) * 0.15;
+        ctx.fillRect(c * T, r * T, T, 2);
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // ── Bifrost — rainbow bridge (diagonal, lower-left to upper-right) ─────────
+  const BIFROST = ['#ff4040', '#ff9020', '#f5c518', '#40c840', '#4090ff', '#8040e0', '#c040c0'];
+  const bfStartX = Math.floor(cols * 0.05) * T;
+  const bfStartY = (horizonY + 2) * T;
+  const bfEndX   = Math.floor(cols * 0.55) * T;
+  const bfEndY   = Math.floor(horizonY * 0.35) * T;
+  const bfDX = bfEndX - bfStartX;
+  const bfDY = bfEndY - bfStartY;
+  const bfLen = Math.sqrt(bfDX * bfDX + bfDY * bfDY);
+  const bfUX = bfDX / bfLen; // unit vector
+  const bfUY = bfDY / bfLen;
+  // Perpendicular
+  const bfPX = -bfUY;
+  const bfPY =  bfUX;
+
+  for (let band = 0; band < BIFROST.length; band++) {
+    ctx.fillStyle = BIFROST[band];
+    const offset = (band - 3) * 3; // -9 to +9 pixels from center
+    for (let t2 = 0; t2 < bfLen; t2 += 1) {
+      const px = bfStartX + bfUX * t2 + bfPX * offset;
+      const py = bfStartY + bfUY * t2 + bfPY * offset;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(Math.round(px), Math.round(py), 2, 2);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // ── Clouds near horizon ────────────────────────────────────────────────────
+  const cloudY = (horizonY - 3) * T;
+  for (let i = 0; i < 8; i++) {
+    const cx = Math.floor(rand() * cols) * T;
+    const cw = Math.floor(rand() * 8 + 4) * T;
+    ctx.fillStyle = '#d0d8f0';
+    ctx.fillRect(cx, cloudY, cw, T);
+    ctx.fillRect(cx + T, cloudY - T, cw - T * 2, T);
+    // Cloud shadow
+    ctx.fillStyle = '#a0a8c0';
+    ctx.fillRect(cx, cloudY + T - 2, cw, 2);
   }
 
-  // ── Trees ────────────────────────────────────────────────────────────────
-  for (let i = 0; i < 28; i++) {
-    const tx = Math.floor(rand() * (cols - 4) + 2) * TILE;
-    const ty = Math.floor(rand() * (rows - 6) + 3) * TILE;
-    if (ty / TILE >= pathY - 3 && ty / TILE <= pathY + 6) continue;
-    drawTree(ctx, tx, ty);
+  // ── Asgard palace floor (bottom half) ──────────────────────────────────────
+  const STONE  = ['#2e2848', '#383050', '#322c4a'];
+  const STONE_LT = '#504870';
+  for (let r = horizonY; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      ctx.fillStyle = STONE[Math.floor(rand() * STONE.length)];
+      ctx.fillRect(c * T, r * T, T, T);
+    }
+  }
+  // Gold mortar lines (grid)
+  ctx.fillStyle = '#c9a020';
+  ctx.globalAlpha = 0.4;
+  const tileSize = T * 4; // each "floor tile" = 4 pixel tiles wide
+  for (let x = 0; x < w; x += tileSize) {
+    ctx.fillRect(x, horizonY * T, 1, h - horizonY * T);
+  }
+  for (let y = horizonY * T; y < h; y += tileSize) {
+    ctx.fillRect(0, y, w, 1);
+  }
+  ctx.globalAlpha = 1;
+
+  // Subtle floor highlights
+  ctx.fillStyle = STONE_LT;
+  for (let i = 0; i < 60; i++) {
+    const fc = Math.floor(rand() * cols);
+    const fr = horizonY + Math.floor(rand() * (rows - horizonY));
+    ctx.fillRect(fc * T, fr * T, 2, 2);
   }
 
-  // ── Water puddles ─────────────────────────────────────────────────────────
-  for (let i = 0; i < 6; i++) {
-    const wx = Math.floor(rand() * (cols - 6) + 3) * TILE;
-    const wy = Math.floor(rand() * (rows - 6) + 3) * TILE;
-    if (wy / TILE >= pathY - 2 && wy / TILE <= pathY + 5) continue;
-    drawWater(ctx, wx, wy);
-  }
+  // ── Golden pillars (left and right) ───────────────────────────────────────
+  const pillarYStart = horizonY * T;
+  const pillarH = h - pillarYStart;
+  const pillarW = T * 3;
 
-  // ── Rocks ─────────────────────────────────────────────────────────────────
-  for (let i = 0; i < 15; i++) {
-    const rx = Math.floor(rand() * (cols - 2)) * TILE;
-    const ry = Math.floor(rand() * (rows - 2)) * TILE;
-    ctx.fillStyle = '#9a8a7a';
-    ctx.fillRect(rx, ry, TILE * 2, TILE);
-    ctx.fillRect(rx + 2, ry - TILE, TILE * 2 - 4, TILE);
-    ctx.fillStyle = '#7a6a5a';
-    ctx.fillRect(rx, ry + TILE - 2, TILE * 2, 2);
-  }
-}
-
-function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  // Trunk
-  ctx.fillStyle = '#6b4320';
-  ctx.fillRect(x + TILE / 2 - 2, y + TILE, 4, TILE * 2);
-  // Shadow trunk
-  ctx.fillStyle = '#4a2f18';
-  ctx.fillRect(x + TILE / 2, y + TILE, 2, TILE * 2);
-  // Leaves (bottom layer)
-  ctx.fillStyle = '#2a6010';
-  ctx.fillRect(x - TILE, y - TILE, TILE * 3, TILE * 2);
-  // Leaves (mid)
-  ctx.fillStyle = '#3a7020';
-  ctx.fillRect(x - TILE / 2, y - TILE * 2, TILE * 2, TILE * 2);
-  // Leaves (top)
-  ctx.fillStyle = '#4a8030';
-  ctx.fillRect(x, y - TILE * 3, TILE, TILE * 2);
-  // Highlight
-  ctx.fillStyle = '#5a9840';
-  ctx.fillRect(x + 2, y - TILE * 3 + 2, 4, 4);
-}
-
-function drawWater(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  const shape = [
-    [1,0],[2,0],[3,0],
-    [0,1],[1,1],[2,1],[3,1],[4,1],
-    [0,2],[1,2],[2,2],[3,2],[4,2],
-    [1,3],[2,3],[3,3],
+  const pillarXs = [
+    T * 2,
+    Math.floor(cols * 0.25) * T,
+    Math.floor(cols * 0.5)  * T,
+    Math.floor(cols * 0.75) * T,
+    (cols - 5) * T,
   ];
-  for (const [dx, dy] of shape) {
-    ctx.fillStyle = '#3880b8';
-    ctx.fillRect(x + dx * TILE, y + dy * TILE, TILE, TILE);
-    // Highlight top-left of each tile
-    ctx.fillStyle = '#60a8e0';
-    ctx.fillRect(x + dx * TILE, y + dy * TILE, 3, 3);
+
+  for (const px of pillarXs) {
+    // Main pillar body
+    ctx.fillStyle = '#c9a020';
+    ctx.fillRect(px, pillarYStart, pillarW, pillarH);
+    // Highlight edge
+    ctx.fillStyle = '#f5c518';
+    ctx.fillRect(px, pillarYStart, 2, pillarH);
+    // Shadow edge
+    ctx.fillStyle = '#806810';
+    ctx.fillRect(px + pillarW - 2, pillarYStart, 2, pillarH);
+    // Capital top
+    ctx.fillStyle = '#f5c518';
+    ctx.fillRect(px - T, pillarYStart, pillarW + T * 2, T);
+    ctx.fillRect(px - T / 2, pillarYStart - T, pillarW + T, T);
+    // Rune carving
+    ctx.fillStyle = '#806810';
+    for (let ry = pillarYStart + T * 2; ry < h - T * 2; ry += T * 5) {
+      ctx.fillRect(px + 2, ry, pillarW - 4, 1);
+      ctx.fillRect(px + 2, ry + 2, pillarW - 4, 1);
+    }
   }
+
+  // ── Horizon glow (gold rim light) ─────────────────────────────────────────
+  ctx.fillStyle = '#f5c518';
+  ctx.globalAlpha = 0.12;
+  ctx.fillRect(0, (horizonY - 1) * T, w, T * 2);
+  ctx.globalAlpha = 0.06;
+  ctx.fillRect(0, (horizonY - 3) * T, w, T * 3);
+  ctx.globalAlpha = 1;
+
+  // ── Rune symbols on floor ──────────────────────────────────────────────────
+  const RUNES = [
+    // [dx, dy] pixel offsets for each rune stroke (2x2 blocks)
+    [[0,0],[0,1],[0,2],[1,1]],        // ᚱ-like
+    [[0,0],[1,0],[0,1],[0,2],[1,2]],  // ᚠ-like
+    [[0,0],[0,1],[1,0],[1,2],[0,2]],  // ᚢ-like
+  ];
+  ctx.fillStyle = '#c9a020';
+  ctx.globalAlpha = 0.3;
+  for (let i = 0; i < 20; i++) {
+    const rx = Math.floor(rand() * (cols - 4) + 2) * T;
+    const ry = (horizonY + Math.floor(rand() * (rows - horizonY - 2))) * T;
+    const rune = RUNES[Math.floor(rand() * RUNES.length)];
+    for (const [dx, dy] of rune) {
+      ctx.fillRect(rx + dx * 3, ry + dy * 3, 2, 2);
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
 export function UniverseBg() {
@@ -146,7 +226,7 @@ export function UniverseBg() {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.imageSmoothingEnabled = false;
-      drawWorld(ctx, canvas.width, canvas.height);
+      drawAsgard(ctx, canvas.width, canvas.height);
     };
 
     draw();

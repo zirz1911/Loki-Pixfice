@@ -10,16 +10,14 @@ interface RoomGridProps {
   onSelectAgent: (agent: AgentState) => void;
 }
 
-// Pixel-art style "wooden plank" background using repeating CSS gradient
-function floorStyle(floor: string) {
+// Asgard stone floor — dark tiles with gold mortar lines
+function stoneFloor(accent: string) {
   return {
-    background: `repeating-linear-gradient(
-      180deg,
-      ${floor}        0px,
-      ${floor}        10px,
-      ${floor}dd      10px,
-      ${floor}dd      11px
-    )`,
+    background: `
+      repeating-conic-gradient(#2e2848 0% 25%, #1e1830 0% 50%)
+      0 0 / 16px 16px
+    `,
+    borderTop: `2px solid ${accent}60`,
   };
 }
 
@@ -38,33 +36,51 @@ export const RoomGrid = memo(function RoomGrid({ sessions, agents, saiyanTargets
 
   return (
     <div className="max-w-[960px] mx-auto px-6 pt-6 pb-10">
-      {/* Pixel HUD — power level */}
+
+      {/* ── Asgard HUD bar ─────────────────────────────────────────────────── */}
       <div
-        className="flex items-center gap-3 mb-5 px-3 py-2"
+        className="flex items-center gap-3 mb-5 px-4 py-2"
         style={{
-          background: '#1a1008',
-          border: '4px solid #8b6340',
-          boxShadow: '4px 4px 0 0 rgba(0,0,0,0.6)',
+          background: '#0e0828',
+          border: '4px solid #c9a020',
+          boxShadow: '4px 4px 0 0 rgba(0,0,0,0.8), 0 0 12px #c9a02040',
           fontFamily: "'Press Start 2P', monospace",
         }}
       >
-        <span className="text-[7px]" style={{ color: '#c8a870' }}>PWR</span>
-        <div className="w-24 h-3 relative" style={{ background: '#2a1808', border: '2px solid #6b4320' }}>
+        {/* Rune icon */}
+        <span style={{ color: '#f5c518', fontSize: '12px' }}>ᚱ</span>
+        <span className="text-[7px]" style={{ color: '#c9a020' }}>PWR</span>
+
+        {/* Power bar */}
+        <div
+          className="w-28 h-3 relative"
+          style={{ background: '#1a1430', border: '2px solid #806810' }}
+        >
           <div
             className="absolute inset-y-0 left-0 transition-all duration-500"
             style={{
               width: `${Math.min(100, (busyCount / Math.max(1, agents.length)) * 100)}%`,
-              background: busyCount > 5 ? '#ef5350' : busyCount > 2 ? '#ffa726' : '#4caf50',
-              imageRendering: 'pixelated',
+              background: busyCount > 5
+                ? '#ef5350'
+                : busyCount > 2
+                ? '#ffa726'
+                : '#f5c518',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
             }}
           />
         </div>
+
         <span className="text-[7px] tabular-nums" style={{ color: '#f5c518' }}>
           {busyCount}/{agents.length}
         </span>
+
+        {/* Divider rune */}
+        <span style={{ color: '#c9a02060', fontSize: '10px', marginLeft: 'auto' }}>
+          ᚠ ᚢ ᚦ ᚨ
+        </span>
       </div>
 
-      {/* Building grid */}
+      {/* ── Realm grid ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {sessions.map((s) => {
           const style = roomStyle(s.name);
@@ -75,48 +91,55 @@ export const RoomGrid = memo(function RoomGrid({ sessions, agents, saiyanTargets
             <div
               key={s.name}
               style={{
-                border: `4px solid ${style.dark}`,
+                border: `4px solid ${style.accent}`,
                 boxShadow: hasBusy
-                  ? `4px 4px 0 0 rgba(0,0,0,0.7), 0 0 20px ${style.accent}40`
-                  : '4px 4px 0 0 rgba(0,0,0,0.7)',
-                imageRendering: 'pixelated',
+                  ? `4px 4px 0 0 rgba(0,0,0,0.8), 0 0 24px ${style.accent}50`
+                  : `4px 4px 0 0 rgba(0,0,0,0.8), 0 0 8px ${style.accent}20`,
               }}
             >
-              {/* Building roof / sign bar */}
+              {/* ── Chamber header ─────────────────────────────────────────── */}
               <div
                 className="flex items-center justify-between px-3 py-2"
                 style={{
                   background: style.dark,
-                  borderBottom: `4px solid ${style.wall}`,
+                  borderBottom: `4px solid ${style.accent}`,
                   fontFamily: "'Press Start 2P', monospace",
                 }}
               >
-                {/* Pixel sign */}
                 <div className="flex items-center gap-2">
-                  <div style={{ width: 8, height: 8, background: style.accent, flexShrink: 0 }} />
-                  <span className="text-[8px] font-bold uppercase" style={{ color: style.accent }}>
+                  {/* Gold pixel gem */}
+                  <div style={{
+                    width: 10, height: 10,
+                    background: style.accent,
+                    boxShadow: `0 0 6px ${style.accent}80`,
+                    flexShrink: 0,
+                    animation: hasBusy ? 'pixel-glow 1s ease-in-out infinite' : 'none',
+                  }} />
+                  <span
+                    className="text-[8px] font-bold uppercase tracking-widest"
+                    style={{ color: style.accent }}
+                  >
                     {style.label}
                   </span>
                 </div>
+
+                {/* Agent count badge */}
                 <span
                   className="text-[7px] px-2 py-0.5"
                   style={{
-                    color: style.accent,
-                    background: `${style.accent}25`,
-                    border: `2px solid ${style.accent}80`,
+                    color: style.dark,
+                    background: style.accent,
+                    fontFamily: "'Press Start 2P', monospace",
                   }}
                 >
                   {roomAgents.length}
                 </span>
               </div>
 
-              {/* 2px accent line */}
-              <div style={{ height: 4, background: style.accent, opacity: hasBusy ? 1 : 0.5 }} />
-
-              {/* Floor — wood planks */}
+              {/* ── Stone floor ────────────────────────────────────────────── */}
               <div
                 className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4 min-h-[150px]"
-                style={floorStyle(style.floor)}
+                style={stoneFloor(style.accent)}
               >
                 {roomAgents.map((agent) => (
                   <AgentCard
@@ -130,9 +153,13 @@ export const RoomGrid = memo(function RoomGrid({ sessions, agents, saiyanTargets
                 {roomAgents.length === 0 && (
                   <div
                     className="col-span-full text-center py-6"
-                    style={{ color: `${style.accent}60`, fontFamily: "'Press Start 2P', monospace", fontSize: '7px' }}
+                    style={{
+                      color: `${style.accent}50`,
+                      fontFamily: "'Press Start 2P', monospace",
+                      fontSize: '7px',
+                    }}
                   >
-                    [ empty ]
+                    ᚾ empty ᚾ
                   </div>
                 )}
               </div>
