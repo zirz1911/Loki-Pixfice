@@ -134,7 +134,9 @@ export function App() {
       <UniverseBg />
       <GameCanvas sessions={sessions} agents={agents} saiyanTargets={saiyanTargets} onSelectAgent={onSelectAgent} />
       <div className="relative z-10" style={{ pointerEvents: 'none' }}>
-        <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="office" />
+        <div style={{ pointerEvents: 'auto' }}>
+          <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="office" />
+        </div>
       </div>
       {terminalModal}
       {showShortcuts && <ShortcutOverlay onClose={() => setShowShortcuts(false)} />}
