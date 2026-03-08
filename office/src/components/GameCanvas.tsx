@@ -1,9 +1,10 @@
 /**
- * GameCanvas — pixel-agents style office
+ * GameCanvas — pixel-agents style open-plan office
  *
  * Sprites: char_0–5.png  (112×96px, 7 cols × 4 rows, frame=16×24)
  *   Col 0–3 walk  Col 4–5 typing  Col 6 idle
- *   Row 0 DOWN  Row 1 UP  Row 2 LEFT  Row 3 RIGHT
+ *   Sprite sheet row order: Row 0=SOUTH(down)  Row 1=WEST(left)  Row 2=EAST(right)  Row 3=NORTH(up)
+ *   → SPRITE_ROW maps game direction enum to sprite sheet row
  *
  * Furniture layout stored in localStorage, drag-and-drop edit mode.
  */
@@ -15,11 +16,14 @@ import {
 } from "../lib/officeLayout";
 
 // ── Sprite constants ───────────────────────────────────────────────────────────
-const FRAME_W = 16, FRAME_H = 24, SCALE = 2;
-const SPW = FRAME_W * SCALE;   // 32
-const SPH = FRAME_H * SCALE;   // 48
+const FRAME_W = 16, FRAME_H = 24, SCALE = 3;
+const SPW = FRAME_W * SCALE;   // 48
+const SPH = FRAME_H * SCALE;   // 72
 
 const DIR_DOWN = 0, DIR_UP = 1, DIR_LEFT = 2, DIR_RIGHT = 3;
+// Sprite sheet row per direction (Row0=south, Row1=west, Row2=east, Row3=north)
+const SPRITE_ROW = [0, 3, 1, 2];  // [DOWN→0, UP→3, LEFT→1, RIGHT→2]
+
 const WALK_COL = 0, TYPE_COL = 4, IDLE_COL = 6;
 const WALK_FRAMES = 4, TYPE_FRAMES = 2;
 
@@ -45,16 +49,19 @@ function preloadImages() {
 function drawCharSprite(ctx: CanvasRenderingContext2D, dx: number, dy: number, name: string, dir: number, col: number) {
   const img = IMAGES.get(spriteIdx(name));
   if (!img?.complete || !img.naturalWidth) return;
-  ctx.drawImage(img, col * FRAME_W, dir * FRAME_H, FRAME_W, FRAME_H, Math.round(dx), Math.round(dy), SPW, SPH);
+  const row = SPRITE_ROW[dir] ?? 0;  // map game direction to sprite sheet row
+  ctx.drawImage(img, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H, Math.round(dx), Math.round(dy), SPW, SPH);
 }
 
 // ── Layout constants ───────────────────────────────────────────────────────────
 const T        = 16;
-const HEADER_H = 52;
+const HEADER_H = 68;   // matches navbar height — canvas draws nothing visible above this
 const WALL_T   = 10;
-const DESK_W   = 40, DESK_H = 22;
-const CHAIR_W  = 14, CHAIR_H = 10;
-const SIT_DY   = -30;
+const DESK_W   = 56, DESK_H = 28;
+const CHAIR_W  = 22, CHAIR_H = 14;
+// SIT_DY: sprite top offset from desk.y when sitting
+// Need: desk.y + SIT_DY + SPH < desk.y + DESK_H + 1  →  SIT_DY < DESK_H+1−SPH = 29−72 = −43
+const SIT_DY   = -45;
 
 const WALK_SPD = 1.5, WANDER_MIN = 60, WANDER_MAX = 190;
 const WALK_TICKS = 4, TYPE_TICKS = 6;
@@ -122,37 +129,43 @@ function drawWallCorner(ctx: CanvasRenderingContext2D, x: number, y: number) {
 
 // ── Desk ───────────────────────────────────────────────────────────────────────
 function drawDesk(ctx: CanvasRenderingContext2D, x: number, y: number, accent: string, busy: boolean, now: number) {
-  ctx.fillStyle = '#503814'; ctx.fillRect(x, y, DESK_W, 3);
-  ctx.fillStyle = '#7a5820'; ctx.fillRect(x, y + 3, DESK_W, DESK_H - 5);
-  ctx.fillStyle = '#9a7030'; ctx.fillRect(x, y + 3, DESK_W, 1); ctx.fillRect(x, y + 3, 1, DESK_H - 5);
-  ctx.fillStyle = '#503814'; ctx.fillRect(x + DESK_W - 1, y + 3, 1, DESK_H - 5);
+  // Back rail
+  ctx.fillStyle = '#503814'; ctx.fillRect(x, y, DESK_W, 4);
+  // Surface
+  ctx.fillStyle = '#7a5820'; ctx.fillRect(x, y + 4, DESK_W, DESK_H - 6);
+  ctx.fillStyle = '#9a7030'; ctx.fillRect(x, y + 4, DESK_W, 1); ctx.fillRect(x, y + 4, 1, DESK_H - 6);
+  ctx.fillStyle = '#503814'; ctx.fillRect(x + DESK_W - 1, y + 4, 1, DESK_H - 6);
 
-  const mX = x + 4, mY = y + 4;
-  ctx.fillStyle = '#141e2e'; ctx.fillRect(mX, mY, 14, 12);
-  ctx.fillStyle = busy ? accent + '28' : '#0a1420'; ctx.fillRect(mX + 1, mY + 1, 12, 10);
+  // Monitor (larger for bigger desk)
+  const mX = x + 6, mY = y + 5;
+  ctx.fillStyle = '#141e2e'; ctx.fillRect(mX, mY, 18, 14);
+  ctx.fillStyle = busy ? accent + '28' : '#0a1420'; ctx.fillRect(mX + 1, mY + 1, 16, 12);
   if (busy) {
     ctx.save(); ctx.globalAlpha = 0.4 + Math.sin(now / 350) * 0.25;
-    ctx.fillStyle = accent; ctx.fillRect(mX + 1, mY + 1, 12, 10); ctx.restore();
+    ctx.fillStyle = accent; ctx.fillRect(mX + 1, mY + 1, 16, 12); ctx.restore();
     ctx.fillStyle = accent;
     const off = Math.floor(now / 170) % 3;
-    for (let i = 0; i < 3; i++) ctx.fillRect(mX + 2, mY + 2 + i * 3, [4, 9, 6][(i + off) % 3], 1);
+    for (let i = 0; i < 4; i++) ctx.fillRect(mX + 2, mY + 2 + i * 3, [5, 13, 8, 10][(i + off) % 4], 1);
   }
-  ctx.fillStyle = '#e8e0cc'; ctx.fillRect(x + 20, y + 4, 10, 8);
-  ctx.fillStyle = '#d8d0b8'; ctx.fillRect(x + 22, y + 3, 10, 8);
-  ctx.fillStyle = '#1a2030'; ctx.fillRect(x + 20, y + 13, 17, 6);
+  // Papers
+  ctx.fillStyle = '#e8e0cc'; ctx.fillRect(x + 28, y + 5, 12, 10);
+  ctx.fillStyle = '#d8d0b8'; ctx.fillRect(x + 30, y + 4, 12, 10);
+  // Keyboard
+  ctx.fillStyle = '#1a2030'; ctx.fillRect(x + 28, y + 16, 22, 8);
   ctx.fillStyle = '#252e40';
-  for (let k = 0; k < 3; k++) ctx.fillRect(x + 22 + k * 5, y + 14, 3, 4);
+  for (let k = 0; k < 4; k++) ctx.fillRect(x + 30 + k * 5, y + 17, 3, 6);
+  // Front face
   ctx.fillStyle = '#503814'; ctx.fillRect(x, y + DESK_H - 2, DESK_W, 2);
 }
 
 // ── Chair ──────────────────────────────────────────────────────────────────────
 function drawChair(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.fillStyle = '#1a2a3c'; ctx.fillRect(x, y, CHAIR_W, 3);
-  ctx.fillStyle = '#2a3c54'; ctx.fillRect(x, y + 3, CHAIR_W, CHAIR_H - 4);
-  ctx.fillStyle = '#3a5070'; ctx.fillRect(x, y + 3, CHAIR_W, 1);
+  ctx.fillStyle = '#1a2a3c'; ctx.fillRect(x, y, CHAIR_W, 4);          // back
+  ctx.fillStyle = '#2a3c54'; ctx.fillRect(x, y + 4, CHAIR_W, CHAIR_H - 5); // seat
+  ctx.fillStyle = '#3a5070'; ctx.fillRect(x, y + 4, CHAIR_W, 1);      // seat highlight
   ctx.fillStyle = '#0a1020';
-  ctx.fillRect(x + 1, y + CHAIR_H - 1, 2, 2);
-  ctx.fillRect(x + CHAIR_W - 3, y + CHAIR_H - 1, 2, 2);
+  ctx.fillRect(x + 2, y + CHAIR_H - 1, 3, 2);                          // left leg
+  ctx.fillRect(x + CHAIR_W - 5, y + CHAIR_H - 1, 3, 2);               // right leg
 }
 
 // ── Plant ──────────────────────────────────────────────────────────────────────
@@ -237,15 +250,15 @@ function computeSections(w: number, h: number, sessions: Session[]): Section[] {
     const theme = getTheme(session.name, si);
     const innerX = sx + WALL_T, innerY = HEADER_H + WALL_T;
     const innerW = secW - WALL_T * 2, innerH = h - HEADER_H - WALL_T;
-    const wanderY = innerY + Math.floor(innerH * 0.5);
     return {
       session, sx, sw: secW,
       accent: theme.accent, label: theme.label, rune: theme.rune,
       innerX, innerY, innerW, innerH,
+      // Open plan: agents wander full section height (no lower-half restriction)
       wanderZone: {
-        x: innerX + 4, y: wanderY,
+        x: innerX + 4, y: innerY + 4,
         w: Math.max(SPW + 10, innerW - 8),
-        h: Math.max(SPH + 10, h - wanderY - WALL_T - 8),
+        h: Math.max(SPH + 10, innerH - 8),
       },
     };
   });
@@ -324,12 +337,12 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
       const hasDesk = layout[sName].items.some(it => it.type === 'desk' && it.agentTarget === ag.target);
       if (!hasDesk) {
         const n = layout[sName].items.filter(it => it.type === 'desk').length;
-        const cols = 3, GAP = 16;
+        const cols = 3, GAP = 24;
         layout[sName].items.push({
           id: `desk-${ag.target}`,
           type: 'desk',
           x: sec.innerX + 10 + (n % cols) * (ITEM_W.desk + GAP),
-          y: HEADER_H + WALL_T + 50 + Math.floor(n / cols) * 82,
+          y: HEADER_H + WALL_T + 70 + Math.floor(n / cols) * 110,
           agentTarget: ag.target,
         });
         changed = true;
@@ -492,29 +505,36 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
       const ents = entRef.current;
       const layout = layoutRef.current;
 
-      // ── Floor ─────────────────────────────────────────────────────────────
-      for (const { sx, sw, innerX, innerY, innerW, innerH } of sections) {
-        const tilesX = Math.ceil(innerW / T), tilesY = Math.ceil(innerH / T);
-        for (let ty = 0; ty < tilesY; ty++)
-          for (let tx = 0; tx < tilesX; tx++)
-            drawFloorTile(ctx, innerX + tx * T, innerY + ty * T, tx, ty);
-        // fill header with dark bg
-        ctx.fillStyle = '#16202e'; ctx.fillRect(sx, 0, sw, HEADER_H);
-        // fill right of last section
-        void sx;
+      // ── Header bar (behind navbar) ────────────────────────────────────────
+      ctx.fillStyle = '#16202e'; ctx.fillRect(0, 0, w, HEADER_H);
+      // Per-section accent strip at bottom of header
+      for (const { sx, sw, accent } of sections) {
+        ctx.fillStyle = accent; ctx.globalAlpha = 0.5;
+        ctx.fillRect(sx, HEADER_H - 2, sw, 2); ctx.globalAlpha = 1;
       }
 
-      // ── Walls ─────────────────────────────────────────────────────────────
-      for (const { sx, sw, accent } of sections) {
-        // Top wall (below header)
-        drawWallH(ctx, sx + WALL_T, HEADER_H, sw - WALL_T * 2, accent);
-        // Left wall
-        drawWallV(ctx, sx, HEADER_H, h - HEADER_H, accent);
-        // Right wall
-        drawWallV(ctx, sx + sw - WALL_T, HEADER_H, h - HEADER_H, accent);
-        // Corners
-        drawWallCorner(ctx, sx, HEADER_H);
-        drawWallCorner(ctx, sx + sw - WALL_T, HEADER_H);
+      // ── Open-plan floor (one continuous room) ────────────────────────────
+      const floorX = WALL_T, floorY = HEADER_H + WALL_T;
+      const floorW = w - WALL_T * 2, floorH = h - HEADER_H - WALL_T;
+      const tilesX = Math.ceil(floorW / T), tilesY = Math.ceil(floorH / T);
+      for (let ty = 0; ty < tilesY; ty++)
+        for (let tx = 0; tx < tilesX; tx++)
+          drawFloorTile(ctx, floorX + tx * T, floorY + ty * T, tx, ty);
+
+      // ── Outer walls only (no section dividers — open plan) ────────────────
+      const wallAccent = '#5a8cff';
+      drawWallH(ctx, WALL_T, HEADER_H, w - WALL_T * 2, wallAccent);
+      drawWallV(ctx, 0, HEADER_H, h - HEADER_H, wallAccent);
+      drawWallV(ctx, w - WALL_T, HEADER_H, h - HEADER_H, wallAccent);
+      drawWallCorner(ctx, 0, HEADER_H);
+      drawWallCorner(ctx, w - WALL_T, HEADER_H);
+
+      // ── Subtle dept dividers (thin dashed lines, not walls) ───────────────
+      for (let si = 1; si < sections.length; si++) {
+        const divX = sections[si].sx;
+        ctx.fillStyle = sections[si].accent; ctx.globalAlpha = 0.12;
+        for (let dy = floorY + 4; dy < h - 4; dy += 12) ctx.fillRect(divX, dy, 1, 8);
+        ctx.globalAlpha = 1;
       }
 
       // ── Collect renderable items ────────────────────────────────────────
@@ -625,36 +645,38 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
       items.sort((a, b) => a.zY !== b.zY ? a.zY - b.zY : a.pri - b.pri);
       for (const item of items) item.draw();
 
-      // ── Section headers ────────────────────────────────────────────────────
+      // ── Dept zone labels (inside room, below top wall) ───────────────────
       for (const { sx, sw, accent, label, rune, session } of sections) {
-        const busy = (layout[session.name]?.items ?? [])
-          .filter(it => it.type === 'desk')
+        const sItems = layout[session.name]?.items ?? [];
+        const busyCount = sItems.filter(it => it.type === 'desk')
           .filter(it => agentsRef.current.find(a => a.target === it.agentTarget)?.status === 'busy').length;
-        const total = (layout[session.name]?.items ?? []).filter(it => it.type === 'desk').length;
+        const totalDesks = sItems.filter(it => it.type === 'desk').length;
 
-        ctx.fillStyle = '#16202e'; ctx.fillRect(sx, 0, sw, HEADER_H);
-        ctx.fillStyle = accent; ctx.globalAlpha = 0.8;
-        ctx.fillRect(sx + WALL_T, HEADER_H - 2, sw - WALL_T * 2, 2); ctx.globalAlpha = 1;
+        const labelY = HEADER_H + WALL_T + 20;
+        const midX = sx + sw / 2;
 
-        ctx.font = '18px serif'; ctx.textAlign = 'left';
-        ctx.fillStyle = accent; ctx.globalAlpha = 0.3;
-        ctx.fillText(rune, sx + WALL_T + 6, 34); ctx.globalAlpha = 1;
+        // Rune glyph
+        ctx.font = '16px serif'; ctx.textAlign = 'left';
+        ctx.fillStyle = accent; ctx.globalAlpha = 0.22;
+        ctx.fillText(rune, sx + WALL_T + 8, labelY + 2); ctx.globalAlpha = 1;
 
-        ctx.font = "8px 'Press Start 2P', monospace"; ctx.textAlign = 'center';
-        ctx.fillStyle = accent; ctx.fillText(label, sx + sw / 2, 22);
+        // Dept name
+        ctx.font = "7px 'Press Start 2P', monospace"; ctx.textAlign = 'center';
+        ctx.fillStyle = accent; ctx.globalAlpha = 0.85;
+        ctx.fillText(label, midX, labelY); ctx.globalAlpha = 1;
 
+        // Session name + count
         ctx.font = "5px 'Press Start 2P', monospace";
-        ctx.fillStyle = accent; ctx.globalAlpha = 0.5;
-        ctx.fillText(session.name.toUpperCase(), sx + sw / 2, 38); ctx.globalAlpha = 1;
+        ctx.fillStyle = accent; ctx.globalAlpha = 0.45;
+        ctx.fillText(session.name.toUpperCase(), midX, labelY + 12); ctx.globalAlpha = 1;
 
-        ctx.font = "5px 'Press Start 2P', monospace"; ctx.textAlign = 'right';
-        ctx.fillStyle = busy > 0 ? '#fdd835' : accent;
-        if (busy > 0) ctx.globalAlpha = 0.7 + Math.sin(now / 400) * 0.3;
-        ctx.fillText(`${busy}/${total}`, sx + sw - WALL_T - 6, 22); ctx.globalAlpha = 1;
-
-        ctx.font = '18px serif'; ctx.textAlign = 'right';
-        ctx.fillStyle = accent; ctx.globalAlpha = 0.3;
-        ctx.fillText(rune, sx + sw - WALL_T - 6, 34); ctx.globalAlpha = 1;
+        if (totalDesks > 0) {
+          ctx.fillStyle = busyCount > 0 ? '#fdd835' : accent;
+          if (busyCount > 0) ctx.globalAlpha = 0.7 + Math.sin(now / 400) * 0.3;
+          ctx.textAlign = 'right';
+          ctx.fillText(`${busyCount}/${totalDesks}`, sx + sw - WALL_T - 8, labelY);
+          ctx.globalAlpha = 1;
+        }
       }
 
       // ── Edit mode overlays ─────────────────────────────────────────────────
