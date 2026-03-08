@@ -1,63 +1,34 @@
 import { useEffect, useRef, useCallback } from "react";
-import { agentEmoji } from "../lib/constants";
+import { roomStyle, agentEmoji } from "../lib/constants";
 import type { AgentState, Session } from "../lib/types";
 
-// ── Sprite constants ──────────────────────────────────────────────────────
-const PS = 2;           // pixels per sprite pixel
-const SW = 16 * PS;     // sprite width  = 32
-const SH = 19 * PS;     // sprite height = 38
-const SPD = 1.0;        // movement speed (px/frame at 12fps)
-const FRAME_TICKS = 5;  // game frames per walk frame
-const WANDER_MIN = 60;
-const WANDER_MAX = 180;
+// ── Sprite ────────────────────────────────────────────────────────────────────
+const PS = 2;
+const SW = 16 * PS;   // 32
+const SH = 19 * PS;   // 38
 
-// ── Sprite: head + body (rows 0–13) ──────────────────────────────────────
-const SPRITE_TOP = [
-  '0000HHHHHHHH0000',
-  '000HHHHHHHHHH000',
-  '000HSSSSSSSSSH00',
-  '00HSSSSSSSSSSSH0',
-  '00HSEPPSEPSSSH00',
-  '00HSSSSSSSSSSSH0',
-  '00HSSSMWWMSSSH00',
-  '00HSSSSSSSSSH000',
-  '000SSSSSSSS00000',
-  '00CCCSSSSCCC0000',
-  '0CCCCCCCCCCCCC00',
-  '0CCCCCCCCCCCCC00',
-  '0CAAACCCCAAACCC0',
-  '0CCCCCCCCCCCCC00',
+const SPRITE_ROWS = [
+  '0000HHHHHHHH0000',  // 0  hair
+  '000HHHHHHHHHH000',  // 1
+  '000HSSSSSSSSSH00',  // 2  forehead
+  '00HSSSSSSSSSSSH0',  // 3
+  '00HSEPPSEPSSSH00',  // 4  eyes
+  '00HSSSSSSSSSSSH0',  // 5
+  '00HSSSMWWMSSSH00',  // 6  mouth
+  '00HSSSSSSSSSH000',  // 7  chin
+  '000SSSSSSSS00000',  // 8  neck
+  '00CCCSSSSCCC0000',  // 9  collar
+  '0CCCCCCCCCCCCC00',  // 10 shoulders
+  '1CCCCCCCCCCCCC00',  // 11 torso
+  '0CAAACCCCAAACCC0',  // 12 torso detail
+  '0CCCCCCCCCCCCC00',  // 13 waist
+  '00LLLLCCCLLLL000',  // 14 upper legs
+  '000LLLL0LLLLL000',  // 15 legs
+  '000LLLL0LLLLL000',  // 16 lower legs
+  '000BBBB0BBBBB000',  // 17 boots
+  '00BBBBB00BBBBB00',  // 18 boots bottom
 ];
 
-// ── Leg frames: stand / walk-A / walk-B ──────────────────────────────────
-const LEGS: string[][] = [
-  // 0 — stand
-  [
-    '00LLLLCCCLLLL000',
-    '000LLLL0LLLLL000',
-    '000LLLL0LLLLL000',
-    '000BBBB0BBBBB000',
-    '00BBBBB00BBBBB00',
-  ],
-  // 1 — walk A: right foot forward
-  [
-    '00LLLLCCCLLLL000',
-    '00LLLLL0LLLLL000',
-    '00LLLLL00LLLL000',
-    '00BBBBB00BBBB000',
-    '0BBBBBB000BBBBB0',
-  ],
-  // 2 — walk B: left foot forward
-  [
-    '00LLLLCCCLLLL000',
-    '000LLLL0LLLLLL00',
-    '0000LLLL0LLLLL00',
-    '0000BBBB0BBBBB00',
-    '00BBBBB000BBBBBB',
-  ],
-];
-
-// ── Agent palettes (name → colors) ───────────────────────────────────────
 interface Pal { H:string;S:string;E:string;P:string;M:string;W:string;C:string;A:string;L:string;B:string }
 
 const PALETTES: Record<string, Pal> = {
@@ -76,42 +47,13 @@ function getPalette(name: string): Pal {
   return PALETTES[pk];
 }
 
-// ── Draw one pixel sprite ─────────────────────────────────────────────────
-function drawSprite(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number,
-  pal: Pal,
-  legFrame: number,
-  facingRight: boolean,
-  status: string,
-) {
-  const rows = [...SPRITE_TOP, ...LEGS[legFrame]];
+function drawSprite(ctx: CanvasRenderingContext2D, x: number, y: number, pal: Pal) {
   const cmap: Record<string, string> = {
     H:pal.H, S:pal.S, E:pal.E, P:pal.P, M:pal.M,
-    W:pal.W, C:pal.C, A:pal.A, L:pal.L, B:pal.B,
+    W:pal.W, C:pal.C, A:pal.A, L:pal.L, B:pal.B, '1':pal.C,
   };
-  const glowColor = status === 'busy' ? '#fdd835' : '#4caf50';
-
-  ctx.save();
-
-  // Flip for left-facing
-  if (!facingRight) {
-    ctx.translate(x + SW, y);
-    ctx.scale(-1, 1);
-    x = 0;
-  }
-
-  // Shadow glow under feet
-  if (status !== 'idle') {
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = glowColor;
-    ctx.fillRect(x + 4, y + SH + 2, SW - 8, 4);
-    ctx.globalAlpha = 1;
-  }
-
-  // Pixel rows
-  for (let r = 0; r < rows.length; r++) {
-    const row = rows[r];
+  for (let r = 0; r < SPRITE_ROWS.length; r++) {
+    const row = SPRITE_ROWS[r];
     for (let c = 0; c < row.length; c++) {
       const ch = row[c];
       if (ch === '0') continue;
@@ -121,52 +63,397 @@ function drawSprite(
       ctx.fillRect(x + c * PS, y + r * PS, PS, PS);
     }
   }
+}
 
-  // Status pixel dot (top-right corner)
-  ctx.fillStyle = status === 'busy' ? '#fdd835' : status === 'ready' ? '#4caf50' : '#555';
-  ctx.fillRect(x + 14 * PS, y, PS * 2, PS * 2);
+// ── Realm colours (from constants + extras) ───────────────────────────────────
+interface Realm {
+  label: string;
+  rune: string;
+  accent: string;
+  headerBg: string;
+  floor1: string;
+  floor2: string;
+  wall: string;
+  deskDark: string;
+  deskMid: string;
+  deskLight: string;
+  monBusy: string;
+  monGlow: string;
+}
+
+const REALM_ASGARD:    Realm = { label:'ASGARD',    rune:'ᚱ', accent:'#f5c518', headerBg:'#0c0820', floor1:'#1e1640', floor2:'#2a1e50', wall:'#c9a020', deskDark:'#3d1e08', deskMid:'#6b3a14', deskLight:'#9a5820', monBusy:'#1a1804', monGlow:'#f5c518' };
+const REALM_MIDGARD:   Realm = { label:'MIDGARD',   rune:'ᚠ', accent:'#6acc4c', headerBg:'#081408', floor1:'#142210', floor2:'#1e2c14', wall:'#4a8c34', deskDark:'#2a1808', deskMid:'#4a3018', deskLight:'#7a5030', monBusy:'#102010', monGlow:'#6acc4c' };
+const REALM_JOTUNHEIM: Realm = { label:'JOTUNHEIM', rune:'ᚢ', accent:'#80b0e0', headerBg:'#060a1a', floor1:'#0e1630', floor2:'#141e3c', wall:'#405878', deskDark:'#0a1020', deskMid:'#162038', deskLight:'#243060', monBusy:'#0c1828', monGlow:'#80b0e0' };
+const REALM_NIFLHEIM:  Realm = { label:'NIFLHEIM',  rune:'ᚦ', accent:'#a0c0d8', headerBg:'#08101a', floor1:'#101828', floor2:'#182030', wall:'#283848', deskDark:'#0c1420', deskMid:'#182030', deskLight:'#243040', monBusy:'#101820', monGlow:'#a0c0d8' };
+const REALM_MUSPELHEIM:Realm = { label:'MUSPELHEIM',rune:'ᚨ', accent:'#ff7040', headerBg:'#180800', floor1:'#2a0c08', floor2:'#380e08', wall:'#802010', deskDark:'#2a0808', deskMid:'#501010', deskLight:'#802010', monBusy:'#1a0c08', monGlow:'#ff7040' };
+const REALM_VANAHEIM:  Realm = { label:'VANAHEIM',  rune:'ᚷ', accent:'#40c8b0', headerBg:'#041410', floor1:'#0a2018', floor2:'#102820', wall:'#106050', deskDark:'#081810', deskMid:'#143020', deskLight:'#205040', monBusy:'#0a1810', monGlow:'#40c8b0' };
+const REALM_ALFHEIM:   Realm = { label:'ALFHEIM',   rune:'ᚾ', accent:'#c060e0', headerBg:'#100818', floor1:'#1e0e30', floor2:'#280e40', wall:'#503868', deskDark:'#1a0828', deskMid:'#2c1040', deskLight:'#481860', monBusy:'#180830', monGlow:'#c060e0' };
+
+const SESSION_REALMS: Record<string, Realm> = {
+  'loki-oracle': REALM_ASGARD,
+  'midgard':     REALM_MIDGARD,
+  'jotunheim':   REALM_JOTUNHEIM,
+  'niflheim':    REALM_NIFLHEIM,
+  'muspelheim':  REALM_MUSPELHEIM,
+  'vanaheim':    REALM_VANAHEIM,
+  'alfheim':     REALM_ALFHEIM,
+};
+const FALLBACK_REALMS = [REALM_ASGARD, REALM_MIDGARD, REALM_JOTUNHEIM, REALM_NIFLHEIM, REALM_MUSPELHEIM];
+
+function assignRealm(sessionName: string, idx: number): Realm {
+  if (SESSION_REALMS[sessionName]) return SESSION_REALMS[sessionName];
+  const n = sessionName.toLowerCase();
+  if (n.includes('asgard') || n.includes('oracle') || n.includes('odin')) return REALM_ASGARD;
+  if (n.includes('mid') || n.includes('office')) return REALM_MIDGARD;
+  if (n.includes('jotun') || n.includes('yot') || n.includes('frost')) return REALM_JOTUNHEIM;
+  if (n.includes('nifl') || n.includes('ice')) return REALM_NIFLHEIM;
+  if (n.includes('musp') || n.includes('fire') || n.includes('flame')) return REALM_MUSPELHEIM;
+  if (n.includes('vana') || n.includes('water')) return REALM_VANAHEIM;
+  if (n.includes('alf') || n.includes('light')) return REALM_ALFHEIM;
+  return FALLBACK_REALMS[idx % FALLBACK_REALMS.length];
+}
+
+// ── Layout constants ───────────────────────────────────────────────────────────
+const HEADER_H  = 52;    // section header height
+const GRID_PAD  = 20;    // padding inside section
+const CELL_W    = 108;   // desk cell width
+const CELL_GAP  = 14;    // gap between cells
+const DESK_W    = 86;    // desk surface width
+const DESK_H    = 24;    // desk surface height (2.5D front face visible)
+const DESK_TOP  = 6;     // "desk top rail" height
+const MON_W     = 28;    // monitor width
+const MON_H     = 24;    // monitor height (side view)
+const CELL_CONTENT_H = MON_H + 4 + DESK_TOP + DESK_H + 4 + SH + 14;  // ≈ 102
+
+// ── Desk cell drawing ─────────────────────────────────────────────────────────
+function drawDeskCell(
+  ctx: CanvasRenderingContext2D,
+  cx: number,           // center x of cell
+  cellY: number,        // top y of cell
+  agent: AgentState,
+  realm: Realm,
+  isSaiyan: boolean,
+  now: number,
+) {
+  const pal     = getPalette(agent.name);
+  const isBusy  = agent.status === 'busy';
+  const isReady = agent.status === 'ready';
+  const deskX   = Math.round(cx - DESK_W / 2);
+
+  // Layout (top → bottom):
+  // cellY + 0              : monitor top
+  // cellY + MON_H          : monitor bottom
+  // cellY + MON_H+4        : desk top rail
+  // cellY + MON_H+4+DESK_TOP : desk surface
+  // cellY + MON_H+4+DESK_TOP+DESK_H+4 : agent sprite
+  const monTop    = cellY;
+  const deskTopY  = monTop + MON_H + 4;
+  const deskSurfY = deskTopY + DESK_TOP;
+  const spriteY   = deskSurfY + DESK_H + 4;
+  const labelY    = spriteY + SH + 10;
+
+  // ── Busy floor glow ───────────────────────────────────────────────────────
+  if (isBusy) {
+    ctx.save();
+    ctx.globalAlpha = 0.06 + Math.sin(now / 500) * 0.04;
+    ctx.fillStyle = realm.accent;
+    ctx.fillRect(deskX - 6, cellY, DESK_W + 12, CELL_CONTENT_H);
+    ctx.restore();
+  }
+
+  // ── Monitor (2.5D side view) ─────────────────────────────────────────────
+  const monX = Math.round(cx - MON_W / 2);
+
+  // Monitor body
+  ctx.fillStyle = '#141020';
+  ctx.fillRect(monX, monTop, MON_W, MON_H);
+  // Top highlight
+  ctx.fillStyle = realm.deskLight;
+  ctx.fillRect(monX, monTop, MON_W, 2);
+  ctx.fillRect(monX, monTop, 2, MON_H);
+  // Right/bottom shadow
+  ctx.fillStyle = realm.deskDark;
+  ctx.fillRect(monX + MON_W - 2, monTop, 2, MON_H);
+  ctx.fillRect(monX, monTop + MON_H - 2, MON_W, 2);
+
+  // Screen area
+  const scrX = monX + 3; const scrY = monTop + 3;
+  const scrW = MON_W - 6; const scrH = MON_H - 8;
+  ctx.fillStyle = isBusy ? realm.monBusy : '#08060c';
+  ctx.fillRect(scrX, scrY, scrW, scrH);
+
+  if (isBusy) {
+    // Screen glow
+    ctx.save();
+    ctx.globalAlpha = 0.3 + Math.sin(now / 350) * 0.2;
+    ctx.fillStyle = realm.monGlow;
+    ctx.fillRect(scrX, scrY, scrW, scrH);
+    ctx.restore();
+    // Code lines (scrolling)
+    ctx.fillStyle = realm.accent;
+    const off = Math.floor(now / 160) % 4;
+    for (let i = 0; i < 3; i++) {
+      const lw = [4, 10, 6, 12, 7][(i * 2 + off) % 5];
+      ctx.fillRect(scrX + 2, scrY + 2 + i * 4, lw, 1);
+    }
+  }
+
+  // Monitor stand
+  ctx.fillStyle = realm.deskDark;
+  ctx.fillRect(monX + MON_W / 2 - 2, monTop + MON_H, 4, 3);
+  ctx.fillRect(monX + MON_W / 2 - 6, monTop + MON_H + 3, 12, 2);
+
+  // Busy typing dots above monitor
+  if (isBusy) {
+    const nDots = 1 + Math.floor(now / 300) % 3;
+    ctx.save();
+    ctx.globalAlpha = 0.8 + Math.sin(now / 200) * 0.2;
+    ctx.fillStyle = realm.accent;
+    ctx.font = "6px 'Press Start 2P', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText('•'.repeat(nDots), cx, monTop - 3);
+    ctx.restore();
+  }
+
+  // ── Desk top rail ─────────────────────────────────────────────────────────
+  ctx.fillStyle = realm.deskDark;
+  ctx.fillRect(deskX, deskTopY, DESK_W, DESK_TOP);
+  ctx.fillStyle = realm.deskLight;
+  ctx.fillRect(deskX, deskTopY, DESK_W, 2);
+
+  // ── Agent sprite ─────────────────────────────────────────────────────────
+  const spriteX = Math.round(cx - SW / 2);
+
+  // Saiyan ring
+  if (isSaiyan) {
+    ctx.save();
+    ctx.globalAlpha = 0.5 + Math.sin(now / 200) * 0.3;
+    ctx.strokeStyle = '#fdd835';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(spriteX - 4, spriteY - 4, SW + 8, SH + 8);
+    ctx.restore();
+  }
+
+  // Busy/ready aura border
+  if (isBusy || isReady) {
+    const pulse = Math.sin(now / 300) * 0.25 + 0.45;
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = isBusy ? '#fdd835' : '#4caf50';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(spriteX - 2, spriteY - 2, SW + 4, SH + 4);
+    ctx.restore();
+  }
+
+  drawSprite(ctx, spriteX, spriteY, pal);
+
+  // Status dot (top-right of sprite)
+  ctx.fillStyle = isBusy ? '#fdd835' : isReady ? '#4caf50' : '#444';
+  ctx.fillRect(spriteX + 14 * PS, spriteY, PS * 2, PS * 2);
+
+  // Emoji badge above head
+  const emoji = agentEmoji(agent.name);
+  if (emoji) {
+    ctx.save();
+    ctx.font = '12px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(emoji, cx, spriteY - 3);
+    ctx.restore();
+  }
+
+  // Floating preview text (busy)
+  if (isBusy && agent.preview) {
+    ctx.save();
+    const floatAlpha = 0.5 + Math.sin(now / 600) * 0.3;
+    ctx.globalAlpha = floatAlpha;
+    ctx.fillStyle = realm.accent;
+    ctx.font = "4px 'Press Start 2P', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText(agent.preview.slice(0, 16), cx, spriteY - 14);
+    ctx.restore();
+  }
+
+  // ── Desk surface (drawn OVER agent's feet → standing-at-desk look) ────────
+  // Main surface
+  ctx.fillStyle = realm.deskMid;
+  ctx.fillRect(deskX, deskSurfY, DESK_W, DESK_H);
+  // Top highlight
+  ctx.fillStyle = realm.deskLight;
+  ctx.fillRect(deskX, deskSurfY, DESK_W, 2);
+  ctx.fillRect(deskX, deskSurfY, 2, DESK_H);
+  // Right / bottom shadow
+  ctx.fillStyle = realm.deskDark;
+  ctx.fillRect(deskX + DESK_W - 2, deskSurfY, 2, DESK_H);
+  ctx.fillRect(deskX, deskSurfY + DESK_H - 2, DESK_W, 2);
+
+  // Papers
+  ctx.fillStyle = '#f0e8d4';
+  ctx.fillRect(deskX + 6, deskSurfY + 5, 20, 14);
+  ctx.fillStyle = '#e0d8c0';
+  ctx.fillRect(deskX + 8, deskSurfY + 3, 20, 14);
+  // Pencil
+  ctx.fillStyle = '#a09040';
+  ctx.fillRect(deskX + 28, deskSurfY + 4, 2, 14);
+
+  // Keyboard
+  ctx.fillStyle = '#1a1428';
+  ctx.fillRect(deskX + DESK_W - 36, deskSurfY + 4, 28, 14);
+  ctx.fillStyle = '#28203a';
+  for (let ki = 0; ki < 4; ki++) {
+    for (let kj = 0; kj < 2; kj++) {
+      ctx.fillRect(deskX + DESK_W - 34 + ki * 6, deskSurfY + 6 + kj * 6, 4, 4);
+    }
+  }
+  // Busy — keyboard glow
+  if (isBusy) {
+    ctx.save();
+    ctx.globalAlpha = 0.2 + Math.sin(now / 180) * 0.15;
+    ctx.fillStyle = realm.monGlow;
+    ctx.fillRect(deskX + DESK_W - 36, deskSurfY + 4, 28, 14);
+    ctx.restore();
+  }
+
+  // ── Name label ───────────────────────────────────────────────────────────
+  ctx.save();
+  ctx.font = "5px 'Press Start 2P', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillStyle = realm.accent;
+  const shortName = agent.name.replace(/-oracle$/, '').toUpperCase().slice(0, 10);
+  ctx.fillText(shortName, cx, labelY);
+
+  // Status indicator dot
+  const dotColor = isBusy ? '#fdd835' : isReady ? '#4caf50' : '#555';
+  if (isBusy) {
+    const dp = Math.sin(now / 250) * 0.3 + 0.7;
+    ctx.save();
+    ctx.globalAlpha = dp;
+  }
+  ctx.fillStyle = dotColor;
+  ctx.fillRect(Math.round(cx - 2), labelY + 5, 4, 4);
+  if (isBusy) ctx.restore();
 
   ctx.restore();
 }
 
-// ── Agent movement entity ─────────────────────────────────────────────────
-interface Entity {
-  x: number; y: number;
-  tx: number; ty: number;
-  facingRight: boolean;
-  legFrame: number;
-  frameTimer: number;
-  wanderTimer: number;
-  zx: number; zy: number; zw: number; zh: number;
+// ── Section header ────────────────────────────────────────────────────────────
+function drawSectionHeader(
+  ctx: CanvasRenderingContext2D,
+  sx: number, sw: number,
+  session: Session,
+  realm: Realm,
+  busyCount: number,
+  totalCount: number,
+  now: number,
+) {
+  // Background
+  ctx.fillStyle = realm.headerBg;
+  ctx.fillRect(sx, 0, sw, HEADER_H);
+
+  // Bottom border
+  ctx.fillStyle = realm.accent;
+  ctx.globalAlpha = 0.8;
+  ctx.fillRect(sx, HEADER_H - 3, sw, 3);
+  ctx.globalAlpha = 1;
+
+  // Left rune
+  ctx.font = '18px serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = realm.accent;
+  ctx.globalAlpha = 0.35;
+  ctx.fillText(realm.rune, sx + 10, 34);
+  ctx.globalAlpha = 1;
+
+  // Realm label
+  ctx.font = "8px 'Press Start 2P', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillStyle = realm.accent;
+  ctx.fillText(realm.label, sx + sw / 2, 22);
+
+  // Session name
+  ctx.font = "5px 'Press Start 2P', monospace";
+  ctx.fillStyle = realm.accent;
+  ctx.globalAlpha = 0.55;
+  ctx.fillText(session.name.toUpperCase(), sx + sw / 2, 38);
+  ctx.globalAlpha = 1;
+
+  // Agent counter (right)
+  ctx.font = "5px 'Press Start 2P', monospace";
+  ctx.textAlign = 'right';
+  ctx.fillStyle = busyCount > 0 ? '#fdd835' : realm.accent;
+  if (busyCount > 0) {
+    const p = Math.sin(now / 400) * 0.2 + 0.8;
+    ctx.globalAlpha = p;
+  }
+  ctx.fillText(`${busyCount}/${totalCount}`, sx + sw - 12, 22);
+  ctx.globalAlpha = 1;
+
+  // Right rune
+  ctx.font = '18px serif';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = realm.accent;
+  ctx.globalAlpha = 0.35;
+  ctx.fillText(realm.rune, sx + sw - 10, 34);
+  ctx.globalAlpha = 1;
 }
 
-function pickTarget(e: Entity) {
-  return {
-    tx: e.zx + 8 + Math.random() * Math.max(0, e.zw - SW - 16),
-    ty: e.zy + 8 + Math.random() * Math.max(0, e.zh - SH - 16),
-  };
+// ── Floor tiles ───────────────────────────────────────────────────────────────
+function drawFloor(
+  ctx: CanvasRenderingContext2D,
+  sx: number, w: number, h: number,
+  realm: Realm,
+) {
+  const T = 16;
+  for (let ty = 0; ty < Math.ceil(h / T); ty++) {
+    for (let tx = 0; tx < Math.ceil(w / T); tx++) {
+      ctx.fillStyle = (tx + ty) % 2 === 0 ? realm.floor1 : realm.floor2;
+      ctx.fillRect(sx + tx * T, ty * T, T, T);
+    }
+  }
 }
 
-// ── Compute realm zones ───────────────────────────────────────────────────
-function computeZones(w: number, h: number, sessionNames: string[]) {
-  const floorY = h * 0.52;
-  const floorH = h - floorY;
-  const cols = 2;
-  const rows = Math.max(1, Math.ceil(sessionNames.length / cols));
-  const zw = w / cols;
-  const zh = floorH / rows;
-
-  return sessionNames.reduce<Record<string, { zx:number; zy:number; zw:number; zh:number }>>((acc, name, i) => {
-    acc[name] = {
-      zx: (i % cols) * zw,
-      zy: floorY + Math.floor(i / cols) * zh,
-      zw, zh,
-    };
-    return acc;
-  }, {});
+// ── Layout computation ────────────────────────────────────────────────────────
+interface DeskInfo { agent: AgentState; cx: number; cellY: number; }
+interface Section {
+  session: Session; realm: Realm;
+  sx: number; sw: number;
+  desks: DeskInfo[];
 }
 
-// ── Component ────────────────────────────────────────────────────────────
+function computeLayout(w: number, h: number, sessions: Session[], agents: AgentState[]): Section[] {
+  const agentsBySession = new Map<string, AgentState[]>();
+  for (const a of agents) {
+    const arr = agentsBySession.get(a.session) ?? [];
+    arr.push(a);
+    agentsBySession.set(a.session, arr);
+  }
+
+  const N  = Math.min(sessions.length, 3);
+  const sw = Math.floor(w / N);
+
+  return sessions.slice(0, N).map((session, i) => {
+    const realm   = assignRealm(session.name, i);
+    const sx      = i * sw;
+    const secW    = i === N - 1 ? w - sx : sw;
+    const inner   = secW - GRID_PAD * 2;
+
+    const sessionAgents = agentsBySession.get(session.name) ?? [];
+    const maxCols = Math.max(1, Math.floor((inner + CELL_GAP) / (CELL_W + CELL_GAP)));
+    const cols    = Math.min(3, Math.min(maxCols, Math.max(1, Math.ceil(Math.sqrt(Math.max(1, sessionAgents.length))))));
+
+    const gridW   = cols * CELL_W + (cols - 1) * CELL_GAP;
+    const startCX = sx + Math.floor((secW - gridW) / 2) + Math.floor(CELL_W / 2);
+
+    const desks: DeskInfo[] = sessionAgents.map((agent, ai) => ({
+      agent,
+      cx:    startCX + (ai % cols) * (CELL_W + CELL_GAP),
+      cellY: HEADER_H + GRID_PAD + Math.floor(ai / cols) * (CELL_CONTENT_H + CELL_GAP),
+    }));
+
+    return { session, realm, sx, sw: secW, desks };
+  });
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 interface Props {
   sessions: Session[];
   agents: AgentState[];
@@ -176,68 +463,38 @@ interface Props {
 
 export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null);
-  const entitiesRef  = useRef(new Map<string, Entity>());
-  const agentsRef    = useRef(agents);
   const frameRef     = useRef(0);
-  const lastTimeRef  = useRef(0);
+  const agentsRef    = useRef(agents);
+  const sessionsRef  = useRef(sessions);
+  const saiyanRef    = useRef(saiyanTargets);
+  const onSelectRef  = useRef(onSelectAgent);
 
-  agentsRef.current = agents;
+  agentsRef.current   = agents;
+  sessionsRef.current = sessions;
+  saiyanRef.current   = saiyanTargets;
+  onSelectRef.current = onSelectAgent;
 
-  // ── Sync entity map when agents change ──
-  const syncEntities = useCallback(() => {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const { width: w, height: h } = canvas;
-    const sessionNames = [...new Set(agentsRef.current.map(a => a.session))];
-    const zones = computeZones(w, h, sessionNames);
-    const ents = entitiesRef.current;
-
-    // Add new
-    for (const agent of agentsRef.current) {
-      if (!ents.has(agent.target)) {
-        const z = zones[agent.session] ?? { zx: 0, zy: h * 0.52, zw: w, zh: h * 0.48 };
-        const x = z.zx + 8 + Math.random() * Math.max(0, z.zw - SW - 16);
-        const y = z.zy + 8 + Math.random() * Math.max(0, z.zh - SH - 16);
-        ents.set(agent.target, {
-          x, y, tx: x, ty: y,
-          facingRight: true,
-          legFrame: 0, frameTimer: 0,
-          wanderTimer: Math.floor(Math.random() * WANDER_MAX),
-          zx: z.zx, zy: z.zy, zw: z.zw, zh: z.zh,
-        });
-      } else {
-        // Update zone bounds
-        const z = zones[agent.session];
-        if (z) {
-          const e = ents.get(agent.target)!;
-          e.zx = z.zx; e.zy = z.zy; e.zw = z.zw; e.zh = z.zh;
-        }
-      }
-    }
-
-    // Remove stale
-    for (const key of ents.keys()) {
-      if (!agentsRef.current.find(a => a.target === key)) ents.delete(key);
-    }
-  }, []);
-
-  // ── Click → find nearest agent ──
-  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
+    const layout = computeLayout(canvas.width, canvas.height, sessionsRef.current, agentsRef.current);
     let best: { agent: AgentState; dist: number } | null = null;
-    for (const agent of agentsRef.current) {
-      const ent = entitiesRef.current.get(agent.target);
-      if (!ent) continue;
-      const dist = Math.hypot(mx - (ent.x + SW / 2), my - (ent.y + SH / 2));
-      if (dist < 30 && (!best || dist < best.dist)) best = { agent, dist };
-    }
-    if (best) onSelectAgent(best.agent);
-  }, [onSelectAgent]);
 
-  // ── Game loop ──
+    for (const section of layout) {
+      for (const desk of section.desks) {
+        const agentCX = desk.cx;
+        const agentCY = desk.cellY + MON_H + 4 + DESK_TOP + DESK_H + 4 + SH / 2;
+        const dist = Math.hypot(mx - agentCX, my - agentCY);
+        if (dist < 44 && (!best || dist < best.dist)) best = { agent: desk.agent, dist };
+      }
+    }
+    if (best) onSelectRef.current(best.agent);
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -245,134 +502,47 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent }: P
     const resize = () => {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
-      syncEntities();
     };
     resize();
     window.addEventListener('resize', resize);
 
     const INTERVAL = 1000 / 12;
+    let lastTime = 0;
 
     function tick(now: number) {
       frameRef.current = requestAnimationFrame(tick);
-      if (now - lastTimeRef.current < INTERVAL) return;
-      lastTimeRef.current = now;
+      if (now - lastTime < INTERVAL) return;
+      lastTime = now;
 
       const ctx = canvas!.getContext('2d');
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas!.width, canvas!.height);
       ctx.imageSmoothingEnabled = false;
 
-      const ents = entitiesRef.current;
       const w = canvas!.width;
       const h = canvas!.height;
-      const sessionNames = [...new Set(agentsRef.current.map(a => a.session))];
-      const zones = computeZones(w, h, sessionNames);
+      const layout = computeLayout(w, h, sessionsRef.current, agentsRef.current);
 
-      // ── Draw zone borders + labels ──
-      ctx.save();
-      for (const [name, z] of Object.entries(zones)) {
-        ctx.strokeStyle = '#c9a02025';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(z.zx + 4, z.zy + 4, z.zw - 8, z.zh - 8);
-        ctx.setLineDash([]);
-        ctx.fillStyle = '#c9a02050';
-        ctx.font = "5px 'Press Start 2P', monospace";
-        ctx.textAlign = 'left';
-        ctx.fillText(name.toUpperCase(), z.zx + 12, z.zy + 14);
-      }
-      ctx.restore();
+      for (const section of layout) {
+        const { realm, sx, sw, session, desks } = section;
 
-      // ── Update + draw each agent ──
-      // Sort by y so agents further up render behind agents lower down
-      const sortedAgents = [...agentsRef.current].sort((a, b) => {
-        const ea = ents.get(a.target);
-        const eb = ents.get(b.target);
-        return (ea?.y ?? 0) - (eb?.y ?? 0);
-      });
+        // Floor
+        drawFloor(ctx, sx, sw, h, realm);
 
-      for (const agent of sortedAgents) {
-        const ent = ents.get(agent.target);
-        if (!ent) continue;
+        // Vertical divider (right edge, not on last section)
+        ctx.fillStyle = realm.wall;
+        ctx.globalAlpha = 0.5;
+        ctx.fillRect(sx + sw - 2, HEADER_H, 2, h - HEADER_H);
+        ctx.globalAlpha = 1;
 
-        // ── Wander ──
-        ent.wanderTimer--;
-        if (ent.wanderTimer <= 0) {
-          const { tx, ty } = pickTarget(ent);
-          ent.tx = tx; ent.ty = ty;
-          ent.wanderTimer = WANDER_MIN + Math.floor(Math.random() * (WANDER_MAX - WANDER_MIN));
+        // Header
+        const busyCount = desks.filter(d => d.agent.status === 'busy').length;
+        drawSectionHeader(ctx, sx, sw, session, realm, busyCount, desks.length, now);
+
+        // Desks
+        for (const desk of desks) {
+          drawDeskCell(ctx, desk.cx, desk.cellY, desk.agent, realm, saiyanRef.current.has(desk.agent.target), now);
         }
-
-        // ── Move ──
-        const dx = ent.tx - ent.x;
-        const dy = ent.ty - ent.y;
-        const dist = Math.hypot(dx, dy);
-        const isMoving = dist > 1.5;
-        const spd = agent.status === 'busy' ? SPD * 1.8 : agent.status === 'idle' ? 0 : SPD;
-
-        if (isMoving && spd > 0) {
-          ent.x += (dx / dist) * spd;
-          ent.y += (dy / dist) * spd;
-          ent.facingRight = dx > 0;
-          ent.x = Math.max(ent.zx, Math.min(ent.zx + ent.zw - SW, ent.x));
-          ent.y = Math.max(ent.zy, Math.min(ent.zy + ent.zh - SH, ent.y));
-        }
-
-        // ── Animate legs ──
-        if (isMoving && spd > 0) {
-          ent.frameTimer++;
-          if (ent.frameTimer >= FRAME_TICKS) {
-            ent.frameTimer = 0;
-            ent.legFrame = ent.legFrame === 1 ? 2 : 1;
-          }
-        } else {
-          ent.legFrame = 0;
-          ent.frameTimer = 0;
-        }
-
-        const pal = getPalette(agent.name);
-        const emoji = agentEmoji(agent.name);
-
-        // ── Busy aura (animated box) ──
-        if (agent.status === 'busy') {
-          const pulse = Math.sin(now / 300) * 0.3 + 0.3;
-          ctx.save();
-          ctx.globalAlpha = pulse;
-          ctx.strokeStyle = '#fdd835';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(ent.x - 3, ent.y - 3, SW + 6, SH + 6);
-          ctx.restore();
-        }
-
-        // ── Saiyan border ──
-        if (saiyanTargets.has(agent.target)) {
-          ctx.save();
-          ctx.globalAlpha = 0.6;
-          ctx.strokeStyle = '#fdd835';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(ent.x - 5, ent.y - 5, SW + 10, SH + 10);
-          ctx.restore();
-        }
-
-        // ── Emoji badge ──
-        if (emoji) {
-          ctx.save();
-          ctx.font = '13px serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(emoji, ent.x + SW / 2, ent.y - 4);
-          ctx.restore();
-        }
-
-        // ── Sprite ──
-        drawSprite(ctx, ent.x, ent.y, pal, ent.legFrame, ent.facingRight, agent.status);
-
-        // ── Name label ──
-        ctx.save();
-        ctx.font = "5px 'Press Start 2P', monospace";
-        ctx.textAlign = 'center';
-        ctx.fillStyle = pal.A;
-        ctx.fillText(agent.name.replace(/-oracle$/, '').slice(0, 10), ent.x + SW / 2, ent.y + SH + 13);
-        ctx.restore();
       }
     }
 
@@ -381,10 +551,7 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent }: P
       cancelAnimationFrame(frameRef.current);
       window.removeEventListener('resize', resize);
     };
-  }, [syncEntities]);
-
-  // Sync when agents/sessions props change
-  useEffect(() => { syncEntities(); }, [agents, sessions, syncEntities]);
+  }, []);
 
   return (
     <canvas
