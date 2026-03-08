@@ -4,11 +4,13 @@ import { useSessions } from "./hooks/useSessions";
 import { UniverseBg } from "./components/UniverseBg";
 import { GameCanvas } from "./components/GameCanvas";
 import { StatusBar } from "./components/StatusBar";
+import { EditToolbar } from "./components/EditToolbar";
 import { TerminalModal } from "./components/TerminalModal";
 import { MissionControl } from "./components/MissionControl";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
 import { unlockAudio, isAudioUnlocked } from "./lib/sounds";
 import type { AgentState } from "./lib/types";
+import type { FurnitureType } from "./lib/officeLayout";
 
 function useHashRoute() {
   const [hash, setHash] = useState(window.location.hash.slice(1) || "office");
@@ -47,13 +49,14 @@ export function App() {
   const route = useHashRoute();
   const [selectedAgent, setSelectedAgent] = useState<AgentState | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [placingType, setPlacingType] = useState<FurnitureType | null>(null);
 
-  // "?" key opens shortcut overlay (only when no input is focused)
+  // "?" key opens shortcut overlay; Escape cancels placing mode
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "?" && !(e.target instanceof HTMLInputElement)) {
-        setShowShortcuts(true);
-      }
+      if (e.key === "Escape") { setPlacingType(null); return; }
+      if (e.key === "?" && !(e.target instanceof HTMLInputElement)) setShowShortcuts(true);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -132,13 +135,26 @@ export function App() {
   return (
     <div className="relative min-h-screen">
       <UniverseBg />
-      <GameCanvas sessions={sessions} agents={agents} saiyanTargets={saiyanTargets} onSelectAgent={onSelectAgent} />
+      <GameCanvas
+        sessions={sessions} agents={agents}
+        saiyanTargets={saiyanTargets} onSelectAgent={onSelectAgent}
+        editMode={editMode} placingType={placingType}
+        onPlacingDone={() => setPlacingType(null)}
+      />
       <div className="relative z-10" style={{ pointerEvents: 'none' }}>
         <div style={{ pointerEvents: 'auto' }}>
           <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="office" />
         </div>
       </div>
-      {terminalModal}
+      <div style={{ pointerEvents: 'none', position: 'fixed', inset: 0, zIndex: 20 }}>
+        <EditToolbar
+          editMode={editMode}
+          placingType={placingType}
+          onToggleEdit={() => { setEditMode(v => !v); setPlacingType(null); }}
+          onSelectPlacing={setPlacingType}
+        />
+      </div>
+      {!editMode && terminalModal}
       {showShortcuts && <ShortcutOverlay onClose={() => setShowShortcuts(false)} />}
     </div>
   );

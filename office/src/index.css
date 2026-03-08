@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --px-sky:       #060310;
-  --px-sky-mid:   #0e0828;
-  --px-stone:     #383050;
-  --px-stone-lt:  #504870;
-  --px-stone-dk:  #1e1830;
-  --px-gold:      #f5c518;
-  --px-gold-dk:   #c9a020;
-  --px-gold-dim:  #806810;
-  --px-silver:    #c0c8e0;
-  --px-text:      #f0e8d0;
-  --px-text-dim:  #a09880;
-  --px-aurora-g:  #40ff90;
-  --px-aurora-b:  #4090ff;
-  --px-aurora-p:  #c040ff;
+  --px-bg:        #1e1e2e;
+  --px-bg-mid:    #16202e;
+  --px-floor1:    #3a2418;
+  --px-floor2:    #2e1c12;
+  --px-wall:      #16202e;
+  --px-accent:    #5a8cff;
+  --px-success:   #5ac88c;
+  --px-warn:      #fdd835;
+  --px-danger:    #ff6b6b;
+  --px-text:      #e0e8ff;
+  --px-text-dim:  #6a7a9a;
+  --px-desk-dk:   #503814;
+  --px-desk-mid:  #7a5820;
+  --px-desk-lt:   #9a7030;
+  --px-chair-bk:  #1a2a3c;
+  --px-chair-st:  #2a3c54;
 }
 
 * { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 body {
-  background: var(--px-sky);
+  background: var(--px-bg);
   color: var(--px-text);
   font-family: 'Press Start 2P', monospace;
   overflow-x: hidden;
@@ -29,32 +31,22 @@ body {
 }
 
 ::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--px-stone-dk); }
-::-webkit-scrollbar-thumb { background: var(--px-gold-dk); }
+::-webkit-scrollbar-track { background: var(--px-bg-mid); }
+::-webkit-scrollbar-thumb { background: var(--px-accent); }
 
 /* Animations */
 @keyframes pixel-idle  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 @keyframes pixel-bob   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes agent-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes pixel-glow  { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
-@keyframes aurora-shift { 0%,100% { opacity: 0.5; transform: translateX(0); } 50% { opacity: 0.8; transform: translateX(8px); } }
-@keyframes star-twinkle { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-@keyframes gold-shimmer { 0%,100% { opacity: 0.8; } 50% { opacity: 1; } }
 @keyframes float-code {
   0%   { opacity: 0; transform: translateY(0); }
   20%  { opacity: 0.9; }
   80%  { opacity: 0.9; }
   100% { opacity: 0; transform: translateY(-24px); }
 }
-@keyframes sparkle     { 0%,100% { opacity: 0; } 50% { opacity: 1; } }
-@keyframes saiyan-aura    { 0%,100% { opacity: 0.5; } 50% { opacity: 0.2; } }
-@keyframes saiyan-outer   { 0%,100% { opacity: 0.3; } 50% { opacity: 0.08; } }
+@keyframes sparkle        { 0%,100% { opacity: 0; } 50% { opacity: 1; } }
 @keyframes saiyan-ring    { 0% { opacity: 0.7; } 100% { opacity: 0; } }
-@keyframes saiyan-glow    { 0% { opacity: 0.25; } 100% { opacity: 0; } }
-@keyframes saiyan-particle { 0% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes saiyan-pillar  { 0% { opacity: 0.5; } 100% { opacity: 0; } }
-@keyframes typing-arm     { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes room-pulse     { 0%,100% { stroke-opacity: 0.2; } 50% { stroke-opacity: 0.5; } }
-@keyframes fadeSlideIn    { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes slideUp        { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes blink          { 50% { opacity: 0; } }
+@keyframes slideUp        { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes fadeSlideIn    { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }

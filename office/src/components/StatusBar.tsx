@@ -18,33 +18,28 @@ export const StatusBar = memo(function StatusBar({ connected, agentCount, sessio
     <header
       className="sticky top-0 z-20 flex items-center gap-4 mx-4 mt-4 px-4 py-3"
       style={{
-        background: '#08041a',
-        border: '4px solid #c9a020',
-        boxShadow: '4px 4px 0 0 rgba(0,0,0,0.9), 0 0 16px #c9a02050',
+        background: '#16202e',
+        border: '2px solid #5a8cff',
+        boxShadow: '4px 4px 0 0 rgba(0,0,0,0.9), 0 0 12px #5a8cff30',
         fontFamily: "'Press Start 2P', monospace",
       }}
     >
-      {/* Rune corner left */}
-      <span style={{ color: '#c9a02060', fontSize: '14px', lineHeight: 1 }}>ᚨ</span>
+      {/* Status pixel */}
+      <div style={{
+        width: 8, height: 8,
+        background: '#5a8cff',
+        boxShadow: '0 0 6px #5a8cff80',
+        flexShrink: 0,
+        animation: 'pixel-glow 2s ease-in-out infinite',
+      }} />
 
       {/* Title */}
-      <div className="flex items-center gap-2">
-        <div style={{
-          width: 12, height: 12,
-          background: '#f5c518',
-          boxShadow: '0 0 8px #f5c51880',
-          flexShrink: 0,
-          animation: 'gold-shimmer 2s ease-in-out infinite',
-        }} />
-        <h1
-          className="text-[10px] font-bold"
-          style={{ color: '#f5c518', letterSpacing: '3px' }}
-        >
-          {activeView === "mission" ? "MISSION CTL" : "LOKI PIXFICE"}
-        </h1>
-        <div style={{ width: 12, height: 12, background: '#f5c518', flexShrink: 0,
-          animation: 'gold-shimmer 2s ease-in-out 1s infinite' }} />
-      </div>
+      <h1
+        className="text-[10px] font-bold"
+        style={{ color: '#5a8cff', letterSpacing: '3px', textShadow: '2px 2px 0 #0a0a14' }}
+      >
+        {activeView === "mission" ? "MISSION CTL" : "LOKI PIXFICE"}
+      </h1>
 
       <div className="ml-auto flex items-center gap-4">
 
@@ -52,21 +47,21 @@ export const StatusBar = memo(function StatusBar({ connected, agentCount, sessio
         <div className="flex items-center gap-2">
           <div style={{
             width: 8, height: 8,
-            background: connected ? '#4caf50' : '#ef5350',
-            boxShadow: connected ? '0 0 6px #4caf5080' : 'none',
+            background: connected ? '#5ac88c' : '#ff6b6b',
+            boxShadow: connected ? '0 0 6px #5ac88c80' : 'none',
             animation: connected ? 'pixel-glow 2s ease-in-out infinite' : 'agent-pulse 0.8s ease-in-out infinite',
           }} />
-          <span className="text-[7px]" style={{ color: connected ? '#4caf50' : '#ef5350' }}>
+          <span className="text-[7px]" style={{ color: connected ? '#5ac88c' : '#ff6b6b' }}>
             {connected ? 'LIVE' : '...'}
           </span>
         </div>
 
         {/* Counters */}
-        <span className="text-[7px]" style={{ color: '#f5c518' }}>
-          {agentCount}✦
+        <span className="text-[7px]" style={{ color: '#5a8cff' }}>
+          {agentCount} agents
         </span>
-        <span className="text-[7px]" style={{ color: '#c9a020' }}>
-          {sessionCount} realms
+        <span className="text-[7px]" style={{ color: '#6a7a9a' }}>
+          {sessionCount} sessions
         </span>
 
         {/* Nav */}
@@ -76,18 +71,15 @@ export const StatusBar = memo(function StatusBar({ connected, agentCount, sessio
             href={item.href}
             className="text-[7px]"
             style={{
-              color: activeView === item.id ? '#f5c518' : '#6a5830',
+              color: activeView === item.id ? '#5a8cff' : '#6a7a9a',
               textDecoration: 'none',
-              borderBottom: activeView === item.id ? '2px solid #f5c518' : 'none',
+              borderBottom: activeView === item.id ? '2px solid #5a8cff' : 'none',
               paddingBottom: '2px',
             }}
           >
             {item.label.toUpperCase()}
           </a>
         ))}
-
-        {/* Rune corner right */}
-        <span style={{ color: '#c9a02060', fontSize: '14px', lineHeight: 1 }}>ᚠ</span>
       </div>
     </header>
   );
