@@ -323,17 +323,38 @@ export const PixelOfficeView = memo(function PixelOfficeView({
         <div style={{
           position: "fixed",
           inset: 0,
-          zIndex: 40,
+          zIndex: 60,
           display: "flex",
           flexDirection: "column",
+          background: "#07080f",
         }}>
-          {/* Backdrop */}
-          <div
-            style={{ flex: 1, background: "#00000080" }}
-            onClick={() => setChatOpen(false)}
-          />
-          {/* Chat panel slides up from bottom */}
-          <div style={{ height: "70vh", flexShrink: 0 }}>
+          {/* Close bar */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px 16px",
+            background: "#0a0b16",
+            borderBottom: "2px solid #1e2840",
+            flexShrink: 0,
+            fontFamily: "'Press Start 2P', monospace",
+          }}>
+            <span style={{ fontSize: 11, color: "#5a8cff", letterSpacing: 2 }}>CHAT</span>
+            <button
+              onClick={() => setChatOpen(false)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#445566",
+                fontSize: 22,
+                cursor: "pointer",
+                lineHeight: 1,
+                padding: "0 4px",
+              }}
+            >x</button>
+          </div>
+          {/* Full height chat */}
+          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
             {chatPanel}
           </div>
         </div>

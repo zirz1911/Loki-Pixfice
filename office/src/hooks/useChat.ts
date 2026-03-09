@@ -31,10 +31,11 @@ export function useChat(agents: AgentState[], send: (msg: object) => void) {
   const [pendingMsgs, setPendingMsgs] = useState<ChatMsg[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-select first agent if none selected
+  // Auto-select Loki first, fallback to first agent
   useEffect(() => {
     if (!selectedTarget && agents.length > 0) {
-      setSelectedTarget(agents[0].target);
+      const loki = agents.find((a) => a.name.toLowerCase().replace(/-oracle$/, "") === "loki");
+      setSelectedTarget(loki ? loki.target : agents[0].target);
     }
   }, [agents, selectedTarget]);
 

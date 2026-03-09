@@ -139,6 +139,33 @@
   .term-input-line.empty .queue-count { display: none; }
   @keyframes blink { 50% { opacity: 0; } }
 
+  /* Key button bar */
+  .key-bar {
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    padding: 5px 14px;
+    background: #080910;
+    border-top: 1px solid #1a2030;
+    flex-shrink: 0;
+  }
+  .key-btn {
+    padding: 3px 7px;
+    background: #0e1220;
+    border: 1px solid #2a3a5066;
+    color: #5a8cff99;
+    font-size: 7px;
+    font-family: 'Press Start 2P', monospace;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #000;
+    user-select: none;
+    transition: all 0.08s;
+    flex-shrink: 0;
+  }
+  .key-btn:hover { background: #1a2240; color: #5a8cff; border-color: #5a8cff; box-shadow: 0 0 6px #5a8cff60, 2px 2px 0 #000; }
+  .key-btn:active { transform: scale(0.95); }
+  .key-btn.accent { background: #1a0e20; border-color: #5a8cff80; color: #5a8cffcc; }
+  .key-btn.accent:hover { background: #1a2240; color: #5a8cff; border-color: #5a8cff; }
+  .key-bar-divider { width: 1px; height: 16px; background: #1a2030; flex-shrink: 0; }
+
   .toast {
     position: fixed; bottom: 20px; right: 20px;
     background: #0a1820; color: #4caf50;
@@ -185,6 +212,23 @@
       <span class="text" id="inputText"></span><span class="cursor"></span>
       <span class="queue-count" id="queueCount"></span>
       <span class="clear-btn" id="clearBtn">esc</span>
+    </div>
+    <div class="key-bar">
+      <button class="key-btn" onclick="sendKey('\x1b')" title="Escape">ESC</button>
+      <button class="key-btn" onclick="sendKey('\t')" title="Tab">TAB ⇥</button>
+      <button class="key-btn" onclick="sendKey('\x1b[A')" title="Up">↑</button>
+      <button class="key-btn" onclick="sendKey('\x1b[B')" title="Down">↓</button>
+      <button class="key-btn" onclick="sendKey('\x1b[D')" title="Left">←</button>
+      <button class="key-btn" onclick="sendKey('\x1b[C')" title="Right">→</button>
+      <button class="key-btn" onclick="sendKey('\x1b[H')" title="Home">HOME</button>
+      <button class="key-btn" onclick="sendKey('\x1b[F')" title="End">END</button>
+      <button class="key-btn" onclick="sendKey('\x1b[5~')" title="Page Up">PGUP</button>
+      <button class="key-btn" onclick="sendKey('\x1b[6~')" title="Page Down">PGDN</button>
+      <div class="key-bar-divider"></div>
+      <button class="key-btn accent" onclick="sendKey('\x03')" title="Ctrl+C — interrupt">^C</button>
+      <button class="key-btn accent" onclick="sendKey('\x04')" title="Ctrl+D — EOF/exit">^D</button>
+      <button class="key-btn accent" onclick="sendKey('\x1a')" title="Ctrl+Z — suspend">^Z</button>
+      <button class="key-btn accent" onclick="sendKey('\r')" title="Enter">ENTER ↵</button>
     </div>
   </div>
 </div>
@@ -395,6 +439,13 @@ el('term').addEventListener('keydown', (e) => {
     updateInputLine();
   }
 });
+
+// Key button bar — send special key directly (bypasses queue)
+function sendKey(seq) {
+  if (!selectedTarget || !ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: 'send', target: selectedTarget, text: seq }));
+  el('term').focus();
+}
 
 // Clear button
 el('clearBtn').addEventListener('click', (e) => {

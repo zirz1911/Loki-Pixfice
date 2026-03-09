@@ -76,6 +76,14 @@ export async function sendKeys(target: string, text: string, host?: string): Pro
     "\x1b[D": "Left",
     "\r": "Enter",
     "\b": "BSpace",
+    "\t": "Tab",
+    "\x03": "C-c",
+    "\x04": "C-d",
+    "\x1a": "C-z",
+    "\x1b[5~": "PPage",
+    "\x1b[6~": "NPage",
+    "\x1b[H": "Home",
+    "\x1b[F": "End",
   };
   if (SPECIAL_KEYS[text]) {
     await ssh(`tmux send-keys -t '${target}' ${SPECIAL_KEYS[text]}`, host);

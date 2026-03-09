@@ -1,7 +1,19 @@
 import { memo, useEffect, useRef, useState, KeyboardEvent } from "react";
-import { agentColor } from "../lib/constants";
+import { agentColor, agentEmoji } from "../lib/constants";
 import type { AgentState } from "../lib/types";
 import { useChat, type ChatMsg } from "../hooks/useChat";
+
+function isLoki(name: string): boolean {
+  return name.toLowerCase().replace(/-oracle$/, "") === "loki";
+}
+
+function sortAgents(agents: AgentState[]): AgentState[] {
+  return [...agents].sort((a, b) => {
+    if (isLoki(a.name)) return -1;
+    if (isLoki(b.name)) return 1;
+    return 0;
+  });
+}
 
 interface ChatPanelProps {
   agents: AgentState[];
@@ -47,10 +59,12 @@ function AgentPills({
         scrollbarWidth: "none",
       }}
     >
-      {agents.map((agent) => {
+      {sortAgents(agents).map((agent) => {
         const selected = agent.target === selectedTarget;
         const color = agentColor(agent.name);
         const dot = STATUS_DOT[agent.status] ?? "#445566";
+        const loki = isLoki(agent.name);
+        const emoji = agentEmoji(agent.name);
         return (
           <button
             key={agent.target}
@@ -59,29 +73,37 @@ function AgentPills({
             title={`${agent.name} — double-click to open terminal`}
             style={{
               flexShrink: 0,
-              padding: "4px 8px",
-              background: selected ? `${color}18` : "#111828",
-              border: `1px solid ${selected ? color + "80" : "#2a3a50"}`,
-              color: selected ? color : "#445566",
-              fontSize: 8,
+              padding: loki ? "5px 10px" : "4px 8px",
+              background: selected
+                ? loki ? `${color}28` : `${color}18`
+                : loki ? "#1a0a28" : "#111828",
+              border: loki
+                ? `${selected ? 2 : 1}px solid ${selected ? color + "cc" : color + "50"}`
+                : `1px solid ${selected ? color + "80" : "#2a3a50"}`,
+              color: selected ? color : loki ? color + "99" : "#445566",
+              fontSize: loki ? 9 : 8,
               fontFamily: "'Press Start 2P', monospace",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               gap: 4,
               transition: "all 0.1s",
+              boxShadow: loki && selected ? `0 0 8px ${color}40` : "none",
             }}
           >
             <span
               style={{
-                width: 5,
-                height: 5,
+                width: loki ? 6 : 5,
+                height: loki ? 6 : 5,
                 background: dot,
                 display: "inline-block",
                 flexShrink: 0,
                 animation: agent.status === "busy" ? "agent-pulse 0.8s infinite" : "none",
               }}
             />
+            {loki && emoji && (
+              <span style={{ fontSize: 10, lineHeight: 1 }}>{emoji}</span>
+            )}
             {shortName(agent.name).slice(0, 8)}
           </button>
         );
@@ -241,32 +263,34 @@ export const ChatPanel = memo(function ChatPanel({
         fontFamily: "'Press Start 2P', monospace",
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          borderBottom: "2px solid #1a2030",
-          padding: "8px 10px",
-          background: "#0a0b14",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          flexShrink: 0,
-        }}
-      >
+      {/* Header — hidden on mobile since overlay already provides one */}
+      {!isMobile && (
         <div
           style={{
-            width: 6,
-            height: 6,
-            background: connected ? "#4caf50" : "#ff6b6b",
-            animation: connected ? "pixel-glow 2s infinite" : "agent-pulse 0.8s infinite",
+            borderBottom: "2px solid #1a2030",
+            padding: "8px 10px",
+            background: "#0a0b14",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
             flexShrink: 0,
           }}
-        />
-        <span style={{ fontSize: 11, color: "#5a8cff", letterSpacing: 2 }}>CHAT</span>
-        <span style={{ marginLeft: "auto", fontSize: 8, color: "#333a50" }}>
-          {messages.length} msgs
-        </span>
-      </div>
+        >
+          <div
+            style={{
+              width: 6,
+              height: 6,
+              background: connected ? "#4caf50" : "#ff6b6b",
+              animation: connected ? "pixel-glow 2s infinite" : "agent-pulse 0.8s infinite",
+              flexShrink: 0,
+            }}
+          />
+          <span style={{ fontSize: 11, color: "#5a8cff", letterSpacing: 2 }}>CHAT</span>
+          <span style={{ marginLeft: "auto", fontSize: 8, color: "#333a50" }}>
+            {messages.length} msgs
+          </span>
+        </div>
+      )}
 
       {/* Agent selector pills */}
       {agents.length > 0 && (
@@ -302,6 +326,7 @@ export const ChatPanel = memo(function ChatPanel({
         style={{
           borderTop: "2px solid #1e2840",
           padding: "6px 8px",
+          paddingBottom: "max(6px, env(safe-area-inset-bottom))",
           background: "#0a0b16",
           display: "flex",
           alignItems: "center",
@@ -321,6 +346,8 @@ export const ChatPanel = memo(function ChatPanel({
         </span>
         <input
           type="text"
+          inputMode="text"
+          enterKeyHint="send"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}

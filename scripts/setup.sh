@@ -1,12 +1,32 @@
 #!/usr/bin/env bash
 # Loki-Pixfice — tmux session setup
-# Creates: loki-oracle (6 agent windows) + loki-pixfice (server)
+# Creates: loki-oracle (7 agent windows, each split 70/30) + loki-pixfice (server)
+#
+# Pane layout per agent window:
+#   ┌─────────────────────┐
+#   │  agent CLI  (pane 0)│  70%
+#   ├─────────────────────┤
+#   │  shell      (pane 1)│  30%
+#   └─────────────────────┘
 
 set -e
 
 BUN=/home/paji/.bun/bin/bun
 ORACLE_DIR=/home/paji/Loki-Oracle
+GEMINI_DIR=/home/paji/Loki-Gemini
 OFFICE_DIR=/home/paji/Project/Loki-Pixfice
+
+# ── Agent definitions: name | work_dir | command ─────────────────────────────
+# Format: "name:workdir:command"
+AGENTS=(
+  "odin:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "thor:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "loki:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "heimdall:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "tyr:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "ymir:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "loki-gemini:$GEMINI_DIR:gemini --yolo"
+)
 
 echo "Setting up Loki-Oracle tmux sessions..."
 
@@ -14,23 +34,34 @@ echo "Setting up Loki-Oracle tmux sessions..."
 if tmux has-session -t loki-oracle 2>/dev/null; then
   echo "  loki-oracle session already exists — skipping"
 else
-  # Create session with first window: odin
-  tmux new-session -d -s loki-oracle -n odin -c "$ORACLE_DIR"
+  FIRST=1
+  for entry in "${AGENTS[@]}"; do
+    IFS=: read -r name workdir cmd <<< "$entry"
 
-  # Add remaining agent windows
-  for agent in thor loki heimdall tyr ymir; do
-    tmux new-window -t loki-oracle -n "$agent" -c "$ORACLE_DIR"
-  done
+    if [[ $FIRST -eq 1 ]]; then
+      # First window: create session
+      tmux new-session -d -s loki-oracle -n "$name" -c "$workdir"
+      FIRST=0
+    else
+      tmux new-window -t loki-oracle -n "$name" -c "$workdir"
+    fi
 
-  # Launch claude --dangerously-skip-permissions in each window
-  # Unset CLAUDECODE to allow nested sessions
-  for agent in odin thor loki heimdall tyr ymir; do
-    tmux send-keys -t "loki-oracle:$agent" "unset CLAUDECODE && claude --dangerously-skip-permissions" Enter
+    # Split: bottom shell pane (~10 lines)
+    tmux split-window -v -l 10 -t "loki-oracle:$name" -c "$workdir"
+
+    # Launch agent in top pane (pane 0)
+    tmux send-keys -t "loki-oracle:${name}.0" "$cmd" Enter
+
+    # Bottom pane (pane 1) stays as plain shell — select it
+    tmux select-pane -t "loki-oracle:${name}.0"
   done
 
   # Focus odin
   tmux select-window -t loki-oracle:odin
-  echo "  loki-oracle: odin thor loki heimdall tyr ymir"
+
+  NAMES=$(printf '%s ' "${AGENTS[@]}" | tr ':' ' ' | awk '{print $1}' | tr '\n' ' ')
+  echo "  loki-oracle: $NAMES"
+  echo "  each window: pane 0 = agent CLI, pane 1 = shell"
 fi
 
 # ── loki-pixfice session (server) ────────────────────────────────────────────
@@ -43,7 +74,7 @@ else
 fi
 
 echo ""
-echo "Done!"
+echo "Done! (${#AGENTS[@]} agents)"
 echo ""
 echo "  Office UI  ->  http://localhost:3456/office"
 echo "  Sessions   ->  tmux attach -t loki-oracle"

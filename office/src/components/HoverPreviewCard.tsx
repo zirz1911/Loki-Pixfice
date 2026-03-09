@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { ansiToHtml } from "../lib/ansi";
 import { AgentAvatar } from "./AgentAvatar";
+import { PixelKey, NAV_KEYS, CTRL_KEYS } from "./PixelKey";
 import type { AgentState } from "../lib/types";
 
 interface HoverPreviewCardProps {
@@ -233,24 +234,6 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
           dangerouslySetInnerHTML={{ __html: ansiToHtml(trimCapture(content)) }}
         />
 
-        {/* Arrow keys (pinned mode) */}
-        {pinned && send && (
-          <div style={{ position: "absolute", bottom: 8, right: 8, display: "flex", flexDirection: "column", gap: 3, zIndex: 10 }}>
-            {[["↑", "\x1b[A"], ["↓", "\x1b[B"]].map(([label, key]) => (
-              <button
-                key={label}
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); send({ type: "send", target: agent.target, text: key }); inputRef.current?.focus(); }}
-                style={{
-                  width: 32, height: 28,
-                  background: "#0a0b16", border: "2px solid #2a3a50",
-                  color: "#5a8cff", fontSize: 12,
-                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                }}
-              >{label}</button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ── Input / preview ──────────────────────────────────────────────── */}
@@ -303,30 +286,30 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
             >SEND</button>
           </div>
 
-          {/* Shortcut hints */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-            padding: "5px 10px",
-            background: "#07080f",
-            borderTop: "1px solid #1a2030",
-            flexShrink: 0,
-          }}>
-            {[["Enter","send"],["⌃Enter","fullscreen"],["Esc","close"]].map(([k,d]) => (
-              <span key={k} style={{ fontSize: 6, color: "#2a3a50", fontFamily: "'Press Start 2P', monospace" }}>
-                <span style={{ color: "#445566" }}>{k}</span> {d}
-              </span>
-            ))}
-            <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); send?.({ type: "send", target: agent.target, text: "\x1b" }); inputRef.current?.focus(); }}
-              style={{
-                background: "#0e1020", border: "1px solid #2a3a50",
-                color: "#445566", fontSize: 6,
-                fontFamily: "'Press Start 2P', monospace",
-                padding: "2px 6px", cursor: "pointer",
-              }}
-            >ESC→tmux</button>
-          </div>
+          {/* Key buttons */}
+          {(() => {
+            const sendKey = (seq: string) => {
+              send?.({ type: "send", target: agent.target, text: seq });
+              inputRef.current?.focus();
+            };
+            return (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap",
+                padding: "5px 10px",
+                background: "#07080f",
+                borderTop: "1px solid #1a2030",
+                flexShrink: 0,
+              }}>
+                {NAV_KEYS.map(({ label, seq }) => (
+                  <PixelKey key={label} label={label} seq={seq} dotColor={accent} sendKey={sendKey} small />
+                ))}
+                <div style={{ width: 1, height: 14, background: "#1a2030", flexShrink: 0 }} />
+                {CTRL_KEYS.map(({ label, seq, title }) => (
+                  <PixelKey key={label} label={label} seq={seq} dotColor={accent} sendKey={sendKey} title={title} accent small />
+                ))}
+              </div>
+            );
+          })()}
         </>
       ) : (
         <div style={{

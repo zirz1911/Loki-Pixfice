@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ansiToHtml } from "../lib/ansi";
+import { PixelKey, NAV_KEYS, CTRL_KEYS } from "./PixelKey";
 import type { AgentState } from "../lib/types";
+import { useViewport } from "../hooks/useViewport";
 
 function trimCapture(raw: string): string {
   const lines = raw.split("\n");
@@ -32,6 +34,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSibling, siblings }: TerminalModalProps) {
+  const { isMobile } = useViewport();
   const [content, setContent] = useState("");
   const [inputBuf, setInputBuf] = useState("");
   const termRef = useRef<HTMLDivElement>(null);
@@ -102,6 +105,11 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
     if (text) setInputBuf((b) => b + text);
   }, []);
 
+  const sendKey = useCallback((seq: string) => {
+    send({ type: "send", target: agent.target, text: seq });
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, [agent.target, send]);
+
   const dotColor = STATUS_COLOR[agent.status] ?? "#445566";
 
   return (
@@ -116,12 +124,26 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
       onClick={(e) => e.target === e.currentTarget && onClose()}
       ref={wrapperRef}
     >
-      <div style={{
-        width: "90vw", maxWidth: 900, height: "80vh",
+      <div style={isMobile ? {
+        width: "100%",
+        height: "100%",
+        maxWidth: "none",
+        background: "#07080f",
+        border: "none",
+        boxShadow: "none",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      } : {
+        width: "90vw",
+        maxWidth: 900,
+        height: "80vh",
         background: "#07080f",
         border: `2px solid ${dotColor}`,
         boxShadow: `0 0 20px ${dotColor}30, 4px 4px 0 #000`,
-        display: "flex", flexDirection: "column", overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}>
 
         {/* ── Window title bar */}
@@ -263,6 +285,46 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
               autoFocus
             />
           </div>
+        </div>
+
+        {/* ── Key buttons */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "6px 14px",
+          background: "#080910",
+          borderTop: "1px solid #1a2030",
+          flexShrink: 0,
+          flexWrap: "wrap",
+          overflowX: "auto",
+        }}>
+          {/* Group 1: Navigation */}
+          {[
+            { label: "ESC", seq: "\x1b" },
+            { label: "TAB ⇥", seq: "\t" },
+            { label: "↑", seq: "\x1b[A" },
+            { label: "↓", seq: "\x1b[B" },
+            { label: "←", seq: "\x1b[D" },
+            { label: "→", seq: "\x1b[C" },
+            { label: "HOME", seq: "\x1b[H" },
+            { label: "END", seq: "\x1b[F" },
+            { label: "PGUP", seq: "\x1b[5~" },
+            { label: "PGDN", seq: "\x1b[6~" },
+          ].map(({ label, seq }) => (
+            <PixelKey key={label} label={label} seq={seq} dotColor={dotColor} sendKey={sendKey} />
+          ))}
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 18, background: "#1a2030", flexShrink: 0 }} />
+
+          {/* Group 2: Control */}
+          {[
+            { label: "^C", seq: "\x03", title: "Ctrl+C — interrupt" },
+            { label: "^D", seq: "\x04", title: "Ctrl+D — EOF/exit" },
+            { label: "^Z", seq: "\x1a", title: "Ctrl+Z — suspend" },
+            { label: "ENTER ↵", seq: "\r" },
+          ].map(({ label, seq, title }) => (
+            <PixelKey key={label} label={label} seq={seq} dotColor={dotColor} sendKey={sendKey} title={title} accent />
+          ))}
         </div>
       </div>
     </div>
