@@ -15,92 +15,60 @@ import {
   ITEM_W, ITEM_H, loadLayout, saveLayout, generateDefaultSection,
 } from "../lib/officeLayout";
 
-// ── Sprite constants — matches AgentAvatar.tsx exactly ───────────────────────
-const PS  = 4;           // pixel scale — matches AgentAvatar
-const SPW = 8 * PS;      // 32px wide
-const SPH = 12 * PS;     // 48px tall (12 sprite rows)
+// ── Sprite constants ──────────────────────────────────────────────────────────
+const PS  = 4;           // used for status dot size
+const SPW = 32;          // sprite render width  (16px × 2)
+const SPH = 48;          // sprite render height (24px × 2)
+const FW  = 16;          // frame width  in sprite sheet
+const FH  = 24;          // frame height in sprite sheet
+const SPRITE_SCALE = 2;  // render 2×
 
-// Direction enum (movement only)
+// Direction enum — matches sprite sheet row order exactly
 const DIR_DOWN = 0, DIR_UP = 1, DIR_LEFT = 2, DIR_RIGHT = 3;
 
 const WALK_FRAMES = 4;
 
-// 8-col × 12-row pixel sprites — identical to AgentAvatar.tsx
-const SPRITES: Record<string, string[]> = {
-  odin: [
-    '0AAAAA00','0HHHHHH0','0SSSSSS0','0SEPPSS0',
-    '0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC',
-    'CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0',
-  ],
-  thor: [
-    '0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0',
-    '0SSSSSS0','0SSMSSS0','0CCCCCC0','CAAACCCC',
-    'CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0',
-  ],
-  loki: [
-    '0HHHHHH0','HHHHHHH0','H0SSSSS0','0SEPPSS0',
-    '0SSSSSS0','0SWMSSS0','0CCCCCC0','CCAACCCC',
-    'CCAAC000','0CCCCCC0','0LL00LL0','0BB00BB0',
-  ],
-  heimdall: [
-    '0HAAHH00','0HHHHHH0','0SSSSSS0','0SEEPSS0',
-    '0SEEPSS0','0SSMSSS0','0CCCCCC0','CAACCACC',
-    'CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0',
-  ],
-  tyr: [
-    '0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0',
-    '0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC',
-    'ACCCCC00','0CCCCCC0','0LL00LL0','0BB00BB0',
-  ],
-  ymir: [
-    'HHHHHHH0','HHHHHHH0','HSSSSSS0','HSEPPSS0',
-    'HSSSSSS0','HSSMWSS0','HCCCCCCH','CAAACCCA',
-    'CCAACCCA','HCCCCCCH','HLL00LLH','HBB00BBH',
-  ],
+// Agent name → char_N.png index
+// loki-gemini starts with "loki" → reuses Loki sprite (char_2)
+const CHAR_MAP: Record<string, number> = {
+  odin: 0, thor: 1, loki: 2, heimdall: 3, tyr: 4, ymir: 5,
 };
-SPRITES.default = [
-  '00HHHH00','0HHHHHH0','0SSSSSS0','0SEPPSS0',
-  '0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC',
-  'CCCCCCCC','0CCCCCC0','0LL00LL0','0BB00BB0',
-];
 
-interface Pal { H:string;S:string;E:string;P:string;M:string;W:string;C:string;A:string;L:string;B:string }
-const PALETTES: Record<string, Pal> = {
-  default:  { H:'#6b3a2a',S:'#fde2c8',E:'#fff',P:'#2c1b0e',M:'#6b3030',W:'#e0c08a',C:'#4a7a2c',A:'#6aaa4c',L:'#4060a0',B:'#2a3070' },
-  odin:     { H:'#c8a830',S:'#d4956b',E:'#fff',P:'#1a1008',M:'#603020',W:'#e0c080',C:'#1e1040',A:'#f5c518',L:'#2c1848',B:'#180830' },
-  thor:     { H:'#d4b050',S:'#fde2c8',E:'#fff',P:'#1a1040',M:'#503020',W:'#fae8c8',C:'#2050a8',A:'#4fc3f7',L:'#183080',B:'#102060' },
-  loki:     { H:'#1a0a30',S:'#c88060',E:'#fff',P:'#3a1060',M:'#501840',W:'#d0a0b0',C:'#5a2080',A:'#c060e0',L:'#3a1060',B:'#200840' },
-  heimdall: { H:'#d4c080',S:'#fde2c8',E:'#fff',P:'#103830',M:'#305040',W:'#e8f0e8',C:'#1a6858',A:'#40d0b0',L:'#0e3838',B:'#082828' },
-  tyr:      { H:'#802020',S:'#fde2c8',E:'#fff',P:'#401010',M:'#601010',W:'#f0d0d0',C:'#802020',A:'#ff6060',L:'#601010',B:'#400808' },
-  ymir:     { H:'#a0c0d8',S:'#c0d8f0',E:'#90b8d0',P:'#304858',M:'#4a6878',W:'#d0e8f8',C:'#4878a0',A:'#90d0f8',L:'#305070',B:'#203040' },
-};
-function drawAgent(
+function agentCharIdx(name: string): number {
+  const key = name.toLowerCase().replace(/-oracle$/, '').replace(/[^a-z]/g, '');
+  const match = Object.keys(CHAR_MAP).find(k => key.startsWith(k));
+  return match !== undefined ? CHAR_MAP[match] : 0;
+}
+
+// Sprite sheet column selection:
+//   Col 0-3 = walk frames  Col 4-5 = typing  Col 6 = idle
+//
+// gen_chibi_final.py make_walk analysis:
+//   f=1 shifts leg LEFT (x-1)  → forward step for LEFT-moving sprite
+//   f=3 shifts leg RIGHT (x+1) → forward step for RIGHT-moving sprite
+//   So LEFT/RIGHT dirs must use different alternating frames to avoid moonwalk
+function spriteCol(moving: boolean, busy: boolean, dir: number, walkFrame: number, now: number): number {
+  if (busy) return 4 + (Math.floor(now / 400) % 2);
+  if (!moving) return 6;
+  // Horizontal: alternate only frames that produce forward leg motion
+  if (dir === DIR_LEFT)  return walkFrame % 2 === 0 ? 0 : 1; // frame 1 = leg LEFT = forward for left
+  if (dir === DIR_RIGHT) return walkFrame % 2 === 0 ? 0 : 3; // frame 3 = leg RIGHT = forward for right
+  return walkFrame; // UP/DOWN: full 4-frame cycle looks fine
+}
+
+function drawAgentSprite(
   ctx: CanvasRenderingContext2D,
+  images: Map<number, HTMLImageElement>,
   x: number, y: number,
   name: string,
-  facingRight: boolean,
+  dir: number,
+  col: number,
 ) {
-  const key = name.toLowerCase().replace(/-oracle$/, '');
-  const pk = Object.keys(PALETTES).find(k => k !== 'default' && key.startsWith(k)) ?? 'default';
-  const pal = PALETTES[pk];
-  const rows = SPRITES[pk] ?? SPRITES.default;
-  const cmap: Record<string, string> = {
-    H:pal.H, S:pal.S, E:pal.E, P:pal.P, M:pal.M,
-    W:pal.W, C:pal.C, A:pal.A, L:pal.L, B:pal.B,
-  };
+  const img = images.get(agentCharIdx(name));
+  if (!img?.complete || img.naturalWidth === 0) return;
   ctx.save();
-  if (!facingRight) { ctx.translate(x + SPW, y); ctx.scale(-1, 1); x = 0; }
-  for (let r = 0; r < rows.length; r++) {
-    const row = rows[r];
-    for (let c = 0; c < row.length; c++) {
-      const ch = row[c];
-      if (ch === '0') continue;
-      const color = cmap[ch];
-      if (!color) continue;
-      ctx.fillStyle = color;
-      ctx.fillRect(x + c * PS, y + r * PS, PS, PS);
-    }
-  }
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, col * FW, dir * FH, FW, FH, x, y, FW * SPRITE_SCALE, FH * SPRITE_SCALE);
   ctx.restore();
 }
 
@@ -341,6 +309,18 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
   const frameRef    = useRef(0);
   const lastTimeRef = useRef(0);
   const entRef      = useRef(new Map<string, Entity>());
+  const imagesRef   = useRef<Map<number, HTMLImageElement>>(new Map());
+
+  // Preload chibi sprite sheets once on mount
+  useEffect(() => {
+    const base = import.meta.env.BASE_URL; // "/office/" in prod, "/" in dev
+    for (let i = 0; i < 6; i++) {
+      const img = new Image();
+      img.src = `${base}assets/characters/char_${i}.png`;
+      img.onerror = () => console.warn(`[GameCanvas] failed to load char_${i}.png`);
+      imagesRef.current.set(i, img);
+    }
+  }, []);
 
   // Always-fresh refs
   const agentsRef    = useRef(agents);
@@ -645,7 +625,10 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
             facingRight = ent.facingRight;
           }
 
-          const _ax = ax, _ay = ay, _facingRight = facingRight;
+          const isMoving = Math.hypot(ent.tx - ent.x, ent.ty - ent.y) > 1.5;
+          const _ax = ax, _ay = ay;
+          const _dir = ent.dir;
+          const _col = spriteCol(isMoving, busy, _dir, ent.walkFrame, now);
           items.push({
             zY: ay + SPH, pri: 1,
             draw: () => {
@@ -668,11 +651,11 @@ export function GameCanvas({ sessions, agents, saiyanTargets, onSelectAgent, edi
                 ctx.textAlign = 'center'; ctx.fillText(dots, _ax + SPW / 2, _ay - 4);
                 ctx.restore();
               }
-              // Status dot (top-right of sprite, matches AgentAvatar)
+              // Status dot (top-right of sprite)
               const dotColor = ag.status === 'busy' ? '#fdd835' : ag.status === 'ready' ? '#5ac88c' : '#445566';
               ctx.fillStyle = dotColor;
               ctx.fillRect(_ax + SPW, _ay, PS * 2, PS * 2);
-              drawAgent(ctx, _ax, _ay, ag.name, _facingRight);
+              drawAgentSprite(ctx, imagesRef.current, _ax, _ay, ag.name, _dir, _col);
             },
           });
 
