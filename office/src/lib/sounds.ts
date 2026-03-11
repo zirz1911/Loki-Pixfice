@@ -48,9 +48,14 @@ export function isAudioUnlocked() {
   return unlocked;
 }
 
+/** Set by store — checked before playing sounds */
+let _muted = false;
+export function setSoundMuted(m: boolean) { _muted = m; }
+export function isSoundMuted() { return _muted; }
+
 /** Play a random super saiyan sound with auto fade-out */
 export function playSaiyanSound() {
-  if (!unlocked) return; // don't attempt before user interaction
+  if (!unlocked || _muted) return;
   try {
     const src = sounds[Math.floor(Math.random() * sounds.length)];
     const audio = new Audio(src);

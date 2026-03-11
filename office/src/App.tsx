@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useSessions } from "./hooks/useSessions";
 import { useMessages } from "./hooks/useMessages";
@@ -10,7 +10,9 @@ import { UniverseBg } from "./components/UniverseBg";
 import { TerminalModal } from "./components/TerminalModal";
 import { MissionControl } from "./components/MissionControl";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
+import { SaiyanToasts } from "./components/SaiyanToasts";
 import { unlockAudio, isAudioUnlocked } from "./lib/sounds";
+import { roomStyle } from "./lib/constants";
 import type { AgentState } from "./lib/types";
 import type { FurnitureType } from "./lib/officeLayout";
 
@@ -74,9 +76,19 @@ export function App() {
     return () => { window.removeEventListener("touchend", handler); clearTimeout(tapTimer.current); };
   }, []);
 
-  const { sessions, agents, saiyanTargets, handleMessage } = useSessions();
+  const { sessions, agents, saiyanTargets, saiyanSources: _ss, eventLog, addEvent, handleMessage } = useSessions();
   const { connected, send } = useWebSocket(handleMessage);
   const { msgs } = useMessages(agents);
+
+  // Build agent positions for SaiyanToasts (accent + label per target)
+  const agentPositions = useMemo(() => {
+    const map = new Map<string, { accent: string; label: string }>();
+    for (const a of agents) {
+      const style = roomStyle(a.session);
+      map.set(a.target, { accent: style.accent, label: style.label });
+    }
+    return map;
+  }, [agents]);
 
   const onSelectAgent = useCallback((agent: AgentState) => {
     setSelectedAgent(agent);
@@ -143,6 +155,14 @@ export function App() {
               connected={connected}
               send={send}
               onSelectAgent={onSelectAgent}
+              eventLog={eventLog}
+              addEvent={addEvent}
+            />
+            <SaiyanToasts
+              saiyanTargets={saiyanTargets}
+              agents={agents}
+              agentPositions={agentPositions}
+              onToastClick={(card) => onSelectAgent(card.agent)}
             />
           </div>
         </div>

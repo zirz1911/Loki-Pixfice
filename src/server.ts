@@ -3,6 +3,10 @@ import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
 import { listSessions, capture, sendKeys, selectWindow } from "./ssh";
 import type { ServerWebSocket } from "bun";
+import { parseLine } from "../office/src/lib/feed";
+import * as fs from "fs";
+
+const FEED_LOG = process.env.FEED_LOG || "/tmp/loki-feed.log";
 
 const app = new Hono();
 app.use("/api/*", cors());
@@ -161,6 +165,63 @@ type WSData = { target: string | null };
 
 const clients = new Set<ServerWebSocket<WSData>>();
 
+// ── Oracle Feed Tail ──────────────────────────────────────────────────────────
+
+let feedFileSize = 0;
+
+/** Read last N lines from feed.log */
+function readFeedLines(n = 50): string[] {
+  try {
+    const content = fs.readFileSync(FEED_LOG, "utf-8");
+    return content.split("\n").filter(l => l.trim()).slice(-n);
+  } catch {
+    return [];
+  }
+}
+
+/** Broadcast a single feed event to all connected clients */
+function broadcastFeedEvent(line: string) {
+  const event = parseLine(line);
+  if (!event) return;
+  const msg = JSON.stringify({ type: "feed", event });
+  for (const ws of clients) ws.send(msg);
+}
+
+/** Tail feed.log — check for new lines every second */
+function startFeedTail() {
+  // Init file size
+  try {
+    feedFileSize = fs.statSync(FEED_LOG).size;
+  } catch {
+    feedFileSize = 0;
+  }
+
+  setInterval(() => {
+    try {
+      let stat;
+      try { stat = fs.statSync(FEED_LOG); } catch { return; }
+
+      if (stat.size < feedFileSize) {
+        // File was truncated/rotated
+        feedFileSize = stat.size;
+        return;
+      }
+      if (stat.size === feedFileSize) return;
+
+      // Read new bytes
+      const buf = Buffer.alloc(stat.size - feedFileSize);
+      const fd = fs.openSync(FEED_LOG, "r");
+      fs.readSync(fd, buf, 0, buf.length, feedFileSize);
+      fs.closeSync(fd);
+      feedFileSize = stat.size;
+
+      const newText = buf.toString("utf-8");
+      const lines = newText.split("\n").filter(l => l.trim());
+      for (const line of lines) broadcastFeedEvent(line);
+    } catch {}
+  }, 1000);
+}
+
 // Push capture to a specific client (only if changed)
 const lastContent = new Map<ServerWebSocket<WSData>, string>();
 
@@ -227,6 +288,14 @@ export function startServer(port = +(process.env.MAW_PORT || 3456)) {
         startIntervals();
         // Send sessions immediately
         listSessions().then(s => ws.send(JSON.stringify({ type: "sessions", sessions: s }))).catch(() => {});
+        // Send feed history on connect
+        try {
+          const lines = readFeedLines(50);
+          const events = lines.map(l => parseLine(l)).filter(Boolean);
+          if (events.length > 0) {
+            ws.send(JSON.stringify({ type: "feed-history", events }));
+          }
+        } catch {}
       },
       message(ws: ServerWebSocket<WSData>, msg) {
         try {
@@ -255,6 +324,7 @@ export function startServer(port = +(process.env.MAW_PORT || 3456)) {
     },
   });
 
+  startFeedTail();
   console.log(`🔮 loki-office → http://localhost:${port} (ws://localhost:${port}/ws)`);
   return server;
 }

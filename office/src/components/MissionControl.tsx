@@ -2,7 +2,7 @@ import { memo, useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { HoverPreviewCard } from "./HoverPreviewCard";
 import { Joystick } from "./Joystick";
 import { roomStyle, NORSE_AGENTS, agentColor } from "../lib/constants";
-import type { AgentState, Session, PaneStatus } from "../lib/types";
+import type { AgentState, Session, PaneStatus, AgentEvent } from "../lib/types";
 
 // ── Pixel sprite data (matches AgentAvatar.tsx) ───────────────────────────────
 const PS = 5; // pixel size in SVG units
@@ -101,6 +101,8 @@ interface MissionControlProps {
   connected: boolean;
   send: (msg: object) => void;
   onSelectAgent: (agent: AgentState) => void;
+  eventLog?: AgentEvent[];
+  addEvent?: (target: string, type: AgentEvent["type"], detail: string) => void;
 }
 
 export const MissionControl = memo(function MissionControl({
@@ -110,6 +112,8 @@ export const MissionControl = memo(function MissionControl({
   connected,
   send,
   onSelectAgent,
+  eventLog,
+  addEvent,
 }: MissionControlProps) {
   const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
   const [hoverPreview, setHoverPreview] = useState<{ agent: AgentState; room: { label: string; accent: string }; pos: { x: number; y: number } } | null>(null);
@@ -737,6 +741,8 @@ export const MissionControl = memo(function MissionControl({
             send={send}
             onFullscreen={onPinnedFullscreen}
             onClose={onPinnedClose}
+            eventLog={eventLog}
+            addEvent={addEvent}
           />
         </div>
       )}

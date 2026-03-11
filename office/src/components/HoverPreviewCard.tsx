@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { ansiToHtml } from "../lib/ansi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PixelKey, NAV_KEYS, CTRL_KEYS } from "./PixelKey";
-import type { AgentState } from "../lib/types";
+import type { AgentState, AgentEvent } from "../lib/types";
 
 interface HoverPreviewCardProps {
   agent: AgentState;
@@ -12,6 +12,8 @@ interface HoverPreviewCardProps {
   send?: (msg: object) => void;
   onFullscreen?: () => void;
   onClose?: () => void;
+  eventLog?: AgentEvent[];
+  addEvent?: (target: string, type: AgentEvent["type"], detail: string) => void;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -38,6 +40,8 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
   send,
   onFullscreen,
   onClose,
+  eventLog,
+  addEvent,
 }: HoverPreviewCardProps) {
   const [content, setContent] = useState("");
   const [inputBuf, setInputBuf] = useState("");
@@ -65,9 +69,11 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
     if (e.key === "Enter") {
       e.preventDefault();
       if (streamingRef.current) {
+        addEvent?.(agent.target, "command", inputBuf);
         send?.({ type: "send", target: agent.target, text: "\r" });
         streamingRef.current = false;
       } else if (inputBuf && send) {
+        addEvent?.(agent.target, "command", inputBuf);
         send({ type: "send", target: agent.target, text: inputBuf });
       }
       setInputBuf("");
@@ -76,7 +82,7 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
     if (e.key === "Backspace" && streamingRef.current && send) {
       send({ type: "send", target: agent.target, text: "\b" });
     }
-  }, [inputBuf, agent.target, send, onClose, onFullscreen]);
+  }, [inputBuf, agent.target, send, onClose, onFullscreen, addEvent]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -106,10 +112,29 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
     return () => { active = false; };
   }, [agent.target]);
 
+  // Auto-scroll — smooth when pinned, instant when hovering; respect user scroll-up
+  const userScrolledRef = useRef(false);
   useEffect(() => {
     const el = termRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [content]);
+    if (!el) return;
+    if (pinned && userScrolledRef.current) return;
+    if (pinned) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [content, pinned]);
+
+  // Detect user scroll-up to pause auto-scroll
+  useEffect(() => {
+    const el = termRef.current;
+    if (!el || !pinned) return;
+    const onScroll = () => {
+      userScrolledRef.current = el.scrollHeight - el.scrollTop - el.clientHeight >= 40;
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [pinned]);
 
   return (
     <div
@@ -192,6 +217,43 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
         <div style={{ fontSize: 6, color: "#2a3a50" }}>{agent.target}</div>
       </div>
 
+      {/* ── Event timeline badges — pinned only ──────────────────────────── */}
+      {pinned && eventLog && (() => {
+        const events = eventLog.filter(e => e.target === agent.target).slice(-20);
+        if (events.length === 0) return null;
+        const BADGE: Record<string, { bg: string; text: string }> = {
+          status: { bg: "rgba(255,255,255,0.06)", text: "#888" },
+          command: { bg: "rgba(34,211,238,0.15)", text: "#22d3ee" },
+          saiyan: { bg: "rgba(253,216,53,0.15)", text: "#fdd835" },
+        };
+        return (
+          <div style={{
+            display: "flex", flexWrap: "wrap", gap: 4,
+            padding: "6px 10px",
+            background: "rgba(255,255,255,0.02)",
+            borderBottom: "1px solid rgba(255,255,255,0.04)",
+            overflow: "hidden", maxHeight: 52, flexShrink: 0,
+          }}>
+            {events.map((ev, i) => {
+              const badge = BADGE[ev.type] || BADGE.status;
+              const t = new Date(ev.time);
+              const ts = `${t.getHours().toString().padStart(2,"0")}:${t.getMinutes().toString().padStart(2,"0")}:${t.getSeconds().toString().padStart(2,"0")}`;
+              return (
+                <span key={i} style={{
+                  display: "inline-flex", alignItems: "center", gap: 3,
+                  padding: "2px 6px", borderRadius: 3,
+                  background: badge.bg, color: badge.text,
+                  fontSize: 8, fontFamily: "monospace", whiteSpace: "nowrap",
+                }} title={`${ts} — ${ev.detail}`}>
+                  <span style={{ color: "rgba(255,255,255,0.3)" }}>{ts.slice(3)}</span>
+                  {ev.detail}
+                </span>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* ── Terminal header ──────────────────────────────────────────────── */}
       <div style={{
         background: "#0a0b16",
@@ -234,6 +296,40 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
           dangerouslySetInnerHTML={{ __html: ansiToHtml(trimCapture(content)) }}
         />
 
+        {/* Up/Down arrow buttons (pinned only) */}
+        {pinned && send && (
+          <div style={{
+            position: "absolute", bottom: 12, right: 12,
+            display: "flex", flexDirection: "column", gap: 4, zIndex: 10,
+          }}>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); send({ type: "send", target: agent.target, text: "\x1b[A" }); inputRef.current?.focus(); }}
+              title="Up → tmux"
+              style={{
+                width: 36, height: 32, borderRadius: 8,
+                background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.5)", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <svg width={12} height={8} viewBox="0 0 12 8"><path d="M1 7L6 1L11 7" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" /></svg>
+            </button>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); send({ type: "send", target: agent.target, text: "\x1b[B" }); inputRef.current?.focus(); }}
+              title="Down → tmux"
+              style={{
+                width: 36, height: 32, borderRadius: 8,
+                background: "rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.5)", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <svg width={12} height={8} viewBox="0 0 12 8"><path d="M1 1L6 7L11 1" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" /></svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Input / preview ──────────────────────────────────────────────── */}
@@ -273,7 +369,11 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                if (inputBuf && send) { send({ type: "send", target: agent.target, text: inputBuf }); setInputBuf(""); }
+                if (inputBuf && send) {
+                  addEvent?.(agent.target, "command", inputBuf);
+                  send({ type: "send", target: agent.target, text: inputBuf });
+                  setInputBuf("");
+                }
                 inputRef.current?.focus();
               }}
               style={{
@@ -310,6 +410,49 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
               </div>
             );
           })()}
+
+          {/* Quick command shortcuts */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
+            padding: "6px 10px",
+            background: "#07080f",
+            borderTop: "1px solid #141a28",
+            flexShrink: 0, overflowX: "auto",
+          }}>
+            {[
+              { label: "y", text: "y\r", color: "#22C55E" },
+              { label: "n", text: "n\r", color: "#ef5350" },
+              { label: "↵", text: "\r", color: "#64748B" },
+              { label: "Tab", text: "\t", color: "#a78bfa" },
+              { label: "/recap", text: "/recap\r", color: "#fbbf24" },
+              { label: "/help", text: "/help\r", color: "#42a5f5" },
+              { label: "Ctrl+C", text: "\x03", color: "#ef5350" },
+              { label: "exit", text: "exit\r", color: "#94A3B8" },
+            ].map(cmd => (
+              <button
+                key={cmd.label}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  send?.({ type: "send", target: agent.target, text: cmd.text });
+                  addEvent?.(agent.target, "command", cmd.label);
+                  inputRef.current?.focus();
+                }}
+                style={{
+                  flexShrink: 0,
+                  padding: "3px 10px",
+                  borderRadius: 6,
+                  fontSize: 9,
+                  fontFamily: "'Press Start 2P', monospace",
+                  cursor: "pointer",
+                  background: `${cmd.color}20`,
+                  color: cmd.color,
+                  border: `1px solid ${cmd.color}30`,
+                  transition: "all 0.1s",
+                }}
+              >{cmd.label}</button>
+            ))}
+          </div>
         </>
       ) : (
         <div style={{
