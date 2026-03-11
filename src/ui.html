@@ -440,6 +440,28 @@ el('term').addEventListener('keydown', (e) => {
   }
 });
 
+// Paste handler — works anywhere on the page
+document.addEventListener('paste', (e) => {
+  if (!selectedTarget || !ws || ws.readyState !== 1) return;
+  e.preventDefault();
+  const text = e.clipboardData?.getData('text') ?? '';
+  if (!text) return;
+  const lines = text.split(/\r?\n/);
+  if (lines.length === 1) {
+    // single line — add to buffer
+    inputBuf += text;
+    updateInputLine();
+  } else {
+    // multiline — send complete lines, keep last remainder in buffer
+    const firstLine = inputBuf + lines[0];
+    queueSend(firstLine);
+    for (let i = 1; i < lines.length - 1; i++) queueSend(lines[i]);
+    inputBuf = lines[lines.length - 1];
+    updateInputLine();
+  }
+  el('term').focus();
+});
+
 // Key button bar — send special key directly (bypasses queue)
 function sendKey(seq) {
   if (!selectedTarget || !ws || ws.readyState !== 1) return;
