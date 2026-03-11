@@ -99,11 +99,38 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
     }
   }, [inputBuf, agent.target, send, onClose, onNavigate, siblings, onSelectSibling]);
 
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+  const handlePaste = useCallback((e: React.ClipboardEvent | ClipboardEvent) => {
     e.preventDefault();
-    const text = e.clipboardData.getData("text");
-    if (text) setInputBuf((b) => b + text);
-  }, []);
+    const text = (e as ClipboardEvent).clipboardData?.getData("text") ?? "";
+    if (!text) return;
+    const lines = text.split(/\r?\n/);
+    if (lines.length === 1) {
+      // single line — add to buffer
+      setInputBuf((b) => b + text);
+    } else {
+      // multiline — send all but last line immediately, keep remainder in buffer
+      setInputBuf((buf) => {
+        const firstLine = buf + lines[0];
+        // send complete lines
+        for (let i = 0; i < lines.length - 1; i++) {
+          const toSend = i === 0 ? firstLine : lines[i];
+          send({ type: "send", target: agent.target, text: toSend + "\r" });
+        }
+        return lines[lines.length - 1]; // leftover stays in buffer
+      });
+    }
+  }, [agent.target, send]);
+
+  // Capture paste anywhere in the modal, not just the input
+  useEffect(() => {
+    const onGlobalPaste = (e: ClipboardEvent) => {
+      if (!wrapperRef.current?.contains(document.activeElement) &&
+          document.activeElement !== inputRef.current) return;
+      handlePaste(e);
+    };
+    document.addEventListener("paste", onGlobalPaste);
+    return () => document.removeEventListener("paste", onGlobalPaste);
+  }, [handlePaste]);
 
   const sendKey = useCallback((seq: string) => {
     send({ type: "send", target: agent.target, text: seq });
