@@ -84,8 +84,12 @@ export function useSessions() {
   }, []);
 
   const triggerFeedSaiyan = useCallback((event: FeedEvent) => {
-    // Strict: only match primary -oracle windows
-    const agent = agentsRef.current.find(a => a.name === `${event.oracle}-oracle`);
+    // Match by window name OR session name (handles both setups)
+    const agent = agentsRef.current.find(
+      a => a.name === event.oracle ||
+           a.name === `${event.oracle}-oracle` ||
+           a.session === `${event.oracle}-oracle`
+    );
     if (!agent) return;
 
     // Stop events → immediately drop Saiyan
@@ -196,11 +200,14 @@ export function useSessions() {
               setCaptureData((p) => {
                 const existing = p[target];
                 if (existing && existing.preview === preview && existing.status === status) return p;
-                // Log status change
+                // Log status change + trigger saiyan when going busy
                 if (existing && existing.status !== status) {
                   addEvent(target, "status", `${existing.status} → ${status}`);
+                  if (status === "busy") extendSaiyan(target, "H");
+                  else if (status !== "busy" && existing.status === "busy") dropSaiyan(target);
+                } else if (!existing && status === "busy") {
+                  extendSaiyan(target, "H");
                 }
-                // Hash still detects busy status for the badge
                 return { ...p, [target]: { preview, status } };
               });
             } catch {}
@@ -212,7 +219,7 @@ export function useSessions() {
     poll();
     return () => clearTimeout(pollTimer.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [extendSaiyan, dropSaiyan]);
 
   // Derive flat agent list (memoized to prevent re-renders)
   const agents: AgentState[] = useMemo(() => {
