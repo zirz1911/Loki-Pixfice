@@ -13,6 +13,7 @@ import { ShortcutOverlay } from "./components/ShortcutOverlay";
 import { SaiyanToasts } from "./components/SaiyanToasts";
 import { JumpOverlay } from "./components/JumpOverlay";
 import { OverviewGrid } from "./components/OverviewGrid";
+import { FleetGrid } from "./components/FleetGrid";
 import { unlockAudio, isAudioUnlocked, setSoundMuted } from "./lib/sounds";
 import { roomStyle } from "./lib/constants";
 import type { AgentState } from "./lib/types";
@@ -86,7 +87,7 @@ export function App() {
     return () => { window.removeEventListener("touchend", handler); clearTimeout(tapTimer.current); };
   }, []);
 
-  const { sessions, agents, saiyanTargets, saiyanSources: _ss, eventLog, addEvent, handleMessage } = useSessions();
+  const { sessions, agents, saiyanTargets, saiyanSources, eventLog, addEvent, handleMessage, feedActive, agentFeedLog } = useSessions();
   const { connected, send } = useWebSocket(handleMessage);
   const { msgs } = useMessages(agents);
 
@@ -247,6 +248,37 @@ export function App() {
           />
         </div>
         {!editMode && terminalModal}
+        {shortcutOverlay}
+      </div>
+    );
+  }
+
+  // ── Route: #fleet — fleet list with stage, rooms, agent rows ──────────────
+  if (route === "fleet") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", background: "#0a0a12", overflow: "hidden" }}>
+        <StatusBar
+          connected={connected} agentCount={agents.length} sessionCount={sessions.length}
+          activeView="fleet" onJump={() => setShowJump(true)}
+          muted={muted} onToggleMute={toggleMute}
+        />
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          <FleetGrid
+            sessions={sessions}
+            agents={agents}
+            saiyanTargets={saiyanTargets}
+            saiyanSources={saiyanSources}
+            connected={connected}
+            send={send}
+            onSelectAgent={onSelectAgent}
+            eventLog={eventLog}
+            addEvent={addEvent}
+            feedActive={feedActive}
+            agentFeedLog={agentFeedLog}
+          />
+        </div>
+        {terminalModal}
+        {jumpOverlay}
         {shortcutOverlay}
       </div>
     );

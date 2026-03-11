@@ -55,6 +55,8 @@ export function agentEmoji(name: string): string {
   return NORSE_AGENTS[key]?.emoji ?? '';
 }
 
+export const PREVIEW_CARD = { width: 540, maxHeight: 760 } as const;
+
 export const DESK = { cols: 4, cellW: 200, cellH: 160, offsetX: 30, offsetY: 60 } as const;
 export const ROOM_GRID = { cols: 3, roomW: 400, roomH: 400, gapX: 20, gapY: 20, startX: 20, startY: 70 } as const;
 export const AVATAR = { radius: 20, strokeWidth: 3, nameLabelMaxChars: 12 } as const;

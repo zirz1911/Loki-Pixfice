@@ -1,4 +1,4 @@
-const DEFAULT_HOST = process.env.MAW_HOST || "white.local";
+const DEFAULT_HOST = process.env.MAW_HOST || "local";
 const IS_LOCAL = DEFAULT_HOST === "local" || DEFAULT_HOST === "localhost";
 
 export async function ssh(cmd: string, host = DEFAULT_HOST): Promise<string> {

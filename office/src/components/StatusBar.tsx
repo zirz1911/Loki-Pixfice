@@ -12,6 +12,7 @@ interface StatusBarProps {
 
 const NAV_ITEMS = [
   { href: "/office/#office",    label: "OFFICE",    id: "office"    },
+  { href: "/office/#fleet",     label: "FLEET",     id: "fleet"     },
   { href: "/office/#mission",   label: "MISSION",   id: "mission"   },
   { href: "/office/#overview",  label: "OVERVIEW",  id: "overview"  },
   { href: "/office/#game",      label: "GAME",      id: "game"      },
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
 
 const VIEW_TITLE: Record<string, string> = {
   office:   "LOKI PIXFICE",
+  fleet:    "FLEET",
   mission:  "MISSION CTL",
   overview: "OVERVIEW",
   game:     "GAME VIEW",
