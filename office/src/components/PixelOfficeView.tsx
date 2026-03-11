@@ -17,16 +17,20 @@ interface CEOBarProps {
 }
 
 const TOP_NAV = [
-  { href: "/office/#office",  label: "OFFICE",   id: "office"   },
-  { href: "/office/#mission", label: "MISSION",  id: "mission"  },
-  { href: "/office/#game",    label: "GAME",     id: "game"     },
-  { href: "/",                label: "TERMINAL", id: "terminal" },
+  { href: "/office/#office",    label: "OFFICE",    id: "office"    },
+  { href: "/office/#fleet",     label: "FLEET",     id: "fleet"     },
+  { href: "/office/#mission",   label: "MISSION",   id: "mission"   },
+  { href: "/office/#overview",  label: "OVERVIEW",  id: "overview"  },
+  { href: "/office/#game",      label: "GAME",      id: "game"      },
+  { href: "/",                  label: "TERMINAL",  id: "terminal"  },
 ];
 
 const MOBILE_NAV = [
-  { href: "/office/#office",  label: "OFFICE",  icon: "🏢", id: "office"  },
-  { href: "/office/#mission", label: "MISSION", icon: "🌌", id: "mission" },
-  { href: "/office/#game",    label: "GAME",    icon: "🎮", id: "game"    },
+  { href: "/office/#office",    label: "OFFICE",    icon: "🏢", id: "office"    },
+  { href: "/office/#fleet",     label: "FLEET",     icon: "🚀", id: "fleet"     },
+  { href: "/office/#mission",   label: "MISSION",   icon: "🌌", id: "mission"   },
+  { href: "/office/#overview",  label: "OVERVIEW",  icon: "📊", id: "overview"  },
+  { href: "/office/#game",      label: "GAME",      icon: "🎮", id: "game"      },
 ];
 
 // ── CEO Bar ────────────────────────────────────────────────────────────────────
