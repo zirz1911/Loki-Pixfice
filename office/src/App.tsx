@@ -11,7 +11,9 @@ import { TerminalModal } from "./components/TerminalModal";
 import { MissionControl } from "./components/MissionControl";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
 import { SaiyanToasts } from "./components/SaiyanToasts";
-import { unlockAudio, isAudioUnlocked } from "./lib/sounds";
+import { JumpOverlay } from "./components/JumpOverlay";
+import { OverviewGrid } from "./components/OverviewGrid";
+import { unlockAudio, isAudioUnlocked, setSoundMuted } from "./lib/sounds";
 import { roomStyle } from "./lib/constants";
 import type { AgentState } from "./lib/types";
 import type { FurnitureType } from "./lib/officeLayout";
@@ -49,14 +51,22 @@ export function App() {
   const route = useHashRoute();
   const [selectedAgent, setSelectedAgent] = useState<AgentState | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showJump, setShowJump] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [placingType, setPlacingType] = useState<FurnitureType | null>(null);
+
+  const toggleMute = useCallback(() => {
+    setMuted(m => { setSoundMuted(!m); return !m; });
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setPlacingType(null); return; }
-      if (e.key === "?" && !(e.target instanceof HTMLInputElement)) setShowShortcuts(true);
+      if (e.key === "Escape") { setPlacingType(null); setShowJump(false); return; }
+      if (e.key === "?" && !(e.target instanceof HTMLInputElement)) { setShowShortcuts(true); return; }
+      if ((e.key === "j" || e.key === "J") && !(e.target instanceof HTMLInputElement) && !e.ctrlKey && !e.metaKey) { setShowJump(true); return; }
+      if ((e.key === "k" && (e.ctrlKey || e.metaKey))) { e.preventDefault(); setShowJump(true); return; }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -122,6 +132,14 @@ export function App() {
     <ShortcutOverlay onClose={() => setShowShortcuts(false)} />
   );
 
+  const jumpOverlay = showJump && (
+    <JumpOverlay
+      agents={agents}
+      onSelect={(agent) => { onSelectAgent(agent); }}
+      onClose={() => setShowJump(false)}
+    />
+  );
+
   // ── Route: #office (default) — new pixel office room grid ─────────────────
   if (route === "office" || route === "") {
     return (
@@ -136,7 +154,30 @@ export function App() {
         />
         {terminalModal}
         {shortcutOverlay}
+        {jumpOverlay}
       </>
+    );
+  }
+
+  // ── Route: #overview — live terminal tiles for all agents ──────────────────
+  if (route === "overview") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", background: "#0a0a12", overflow: "hidden" }}>
+        <StatusBar
+          connected={connected} agentCount={agents.length} sessionCount={sessions.length}
+          activeView="overview" onJump={() => setShowJump(true)}
+          muted={muted} onToggleMute={toggleMute}
+        />
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          <OverviewGrid
+            sessions={sessions} agents={agents} saiyanTargets={saiyanTargets}
+            connected={connected} send={send} onSelectAgent={onSelectAgent}
+          />
+        </div>
+        {terminalModal}
+        {jumpOverlay}
+        {shortcutOverlay}
+      </div>
     );
   }
 
@@ -146,7 +187,11 @@ export function App() {
       <div style={{ position: "relative", height: "100vh", width: "100vw", overflow: "hidden", background: "#060614" }}>
         <UniverseBg />
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
-          <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="mission" />
+          <StatusBar
+            connected={connected} agentCount={agents.length} sessionCount={sessions.length}
+            activeView="mission" onJump={() => setShowJump(true)}
+            muted={muted} onToggleMute={toggleMute}
+          />
           <div style={{ flex: 1, overflow: "hidden" }}>
             <MissionControl
               sessions={sessions}
@@ -168,6 +213,7 @@ export function App() {
         </div>
         {terminalModal}
         {shortcutOverlay}
+        {jumpOverlay}
       </div>
     );
   }
@@ -185,7 +231,11 @@ export function App() {
         />
         <div style={{ position: "relative", zIndex: 10, pointerEvents: "none" }}>
           <div style={{ pointerEvents: "auto" }}>
-            <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="game" />
+            <StatusBar
+            connected={connected} agentCount={agents.length} sessionCount={sessions.length}
+            activeView="game" onJump={() => setShowJump(true)}
+            muted={muted} onToggleMute={toggleMute}
+          />
           </div>
         </div>
         <div style={{ pointerEvents: "none", position: "fixed", inset: 0, zIndex: 20 }}>

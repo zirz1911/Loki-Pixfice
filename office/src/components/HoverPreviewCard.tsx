@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
-import { ansiToHtml } from "../lib/ansi";
+import { ansiToHtml, processCapture } from "../lib/ansi";
 import { AgentAvatar } from "./AgentAvatar";
 import { PixelKey, NAV_KEYS, CTRL_KEYS } from "./PixelKey";
 import type { AgentState, AgentEvent } from "../lib/types";
@@ -22,15 +22,6 @@ const STATUS_COLORS: Record<string, string> = {
   idle: "#445566",
 };
 
-function trimCapture(raw: string): string {
-  const lines = raw.split("\n");
-  while (lines.length > 0) {
-    const stripped = lines[lines.length - 1].replace(/\x1b\[[0-9;]*m/g, "").trim();
-    if (stripped === "") lines.pop();
-    else break;
-  }
-  return lines.join("\n");
-}
 
 export const HoverPreviewCard = memo(function HoverPreviewCard({
   agent,
@@ -293,7 +284,7 @@ export const HoverPreviewCard = memo(function HoverPreviewCard({
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
           }}
-          dangerouslySetInnerHTML={{ __html: ansiToHtml(trimCapture(content)) }}
+          dangerouslySetInnerHTML={{ __html: ansiToHtml(processCapture(content)) }}
         />
 
         {/* Up/Down arrow buttons (pinned only) */}
