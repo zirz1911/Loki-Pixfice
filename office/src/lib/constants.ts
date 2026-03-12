@@ -65,7 +65,7 @@ export type AgentCategory = "local" | "cloud" | "gemini" | "terminal";
 const GEMINI_NAMES   = new Set(["loki-gemini", "gemini"]);
 const TERMINAL_NAMES = new Set(["comfyui", "dl-models", "server", "jupyter", "ollama"]);
 // Local-first agents (qwen default, haiku escalation)
-const LOCAL_NAMES    = new Set(["thor", "huginn", "heimdall", "loki", "tyr", "muninn"]);
+const LOCAL_NAMES    = new Set(["thor", "huginn", "heimdall", "tyr", "muninn"]);
 // Cloud-only agents (no local model available)
 // loki = main Oracle identity (cloud-only, like odin)
 const CLOUD_NAMES    = new Set(["odin", "ymir", "loki"]);
