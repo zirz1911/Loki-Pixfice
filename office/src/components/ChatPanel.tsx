@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, KeyboardEvent } from "react";
+import { memo, useEffect, useRef, useState, KeyboardEvent, ClipboardEvent, ChangeEvent } from "react";
 import { agentColor, agentEmoji } from "../lib/constants";
 import type { AgentState } from "../lib/types";
 import { useChat, type ChatMsg } from "../hooks/useChat";
@@ -217,7 +217,41 @@ export const ChatPanel = memo(function ChatPanel({
 }: ChatPanelProps) {
   const { messages, sendMessage, selectedTarget, setSelectedTarget } = useChat(agents, send);
   const [inputText, setInputText] = useState("");
+  const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function uploadImage(blob: Blob) {
+    setUploading(true);
+    try {
+      const ext = (blob.type.split("/")[1] || "png").replace("jpeg", "jpg");
+      const formData = new FormData();
+      formData.append("file", blob, `image.${ext}`);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.path) {
+        setInputText((prev) => (prev ? `${prev} ${data.path}` : data.path));
+      }
+    } catch {}
+    setUploading(false);
+  }
+
+  function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
+    const imageItem = Array.from(e.clipboardData.items).find((i) =>
+      i.type.startsWith("image/")
+    );
+    if (!imageItem) return;
+    e.preventDefault();
+    const blob = imageItem.getAsFile();
+    if (blob) uploadImage(blob);
+  }
+
+  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadImage(file);
+    e.target.value = "";
+  }
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -351,7 +385,9 @@ export const ChatPanel = memo(function ChatPanel({
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="type message..."
+          onPaste={handlePaste}
+          placeholder={uploading ? "uploading..." : "type message or paste image..."}
+          disabled={uploading}
           style={{
             flex: 1,
             background: "transparent",
@@ -361,10 +397,38 @@ export const ChatPanel = memo(function ChatPanel({
             fontSize: 10,
             fontFamily: "monospace",
             minWidth: 0,
+            opacity: uploading ? 0.5 : 1,
           }}
         />
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+        />
+        {/* Upload button */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          title="Upload image"
+          style={{
+            padding: "4px 6px",
+            background: uploading ? "#1a2030" : "#111828",
+            border: "1px solid #2a3a50",
+            color: uploading ? "#445566" : "#5a8cff",
+            fontSize: 10,
+            cursor: uploading ? "not-allowed" : "pointer",
+            flexShrink: 0,
+            lineHeight: 1,
+          }}
+        >
+          📎
+        </button>
         <button
           onClick={handleSend}
+          disabled={uploading}
           style={{
             padding: "4px 8px",
             background: "#5a8cff",
@@ -374,6 +438,7 @@ export const ChatPanel = memo(function ChatPanel({
             fontFamily: "'Press Start 2P', monospace",
             cursor: "pointer",
             flexShrink: 0,
+            opacity: uploading ? 0.5 : 1,
           }}
         >
           SEND

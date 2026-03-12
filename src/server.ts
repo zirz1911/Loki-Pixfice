@@ -155,6 +155,30 @@ app.post("/api/select", async (c) => {
   return c.json({ ok: true, target });
 });
 
+app.post("/api/upload", async (c) => {
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get("file") as File | null;
+    if (!file) return c.json({ error: "file required" }, 400);
+
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const allowed = ["png", "jpg", "jpeg", "gif", "webp"];
+    if (!allowed.includes(ext)) return c.json({ error: "unsupported image type" }, 400);
+
+    const dir = "/tmp/loki-uploads";
+    fs.mkdirSync(dir, { recursive: true });
+
+    const filename = `${Date.now()}.${ext}`;
+    const path = `${dir}/${filename}`;
+    const buffer = await file.arrayBuffer();
+    fs.writeFileSync(path, Buffer.from(buffer));
+
+    return c.json({ ok: true, path });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
 // Serve UI
 const html = Bun.file(import.meta.dir + "/ui.html");
 app.get("/", (c) => c.body(html.stream(), { headers: { "Content-Type": "text/html" } }));
