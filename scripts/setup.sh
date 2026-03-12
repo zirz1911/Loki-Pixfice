@@ -13,6 +13,7 @@ set -e
 
 BUN=/home/paji/.bun/bin/bun
 ORACLE_DIR=/home/paji/Loki-Oracle
+FREYR_DIR=/home/paji/Freyr-Oracle
 GEMINI_DIR=/home/paji/Loki-Gemini
 OFFICE_DIR=/home/paji/Project/Loki-Pixfice
 
@@ -27,6 +28,7 @@ AGENTS=(
   "tyr:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "ymir:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "loki-gemini:$GEMINI_DIR:gemini --yolo"
+  "freyr:$FREYR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
 )
 
 echo "Setting up Loki-Oracle tmux sessions..."

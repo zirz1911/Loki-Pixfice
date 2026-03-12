@@ -61,15 +61,29 @@ export function parseConversation(raw: string): ConvTurn[] {
     currentText = [];
   }
 
+  // Detect Gemini CLI output (has status bar with /model)
+  const isGemini = /\/model\s+(Auto|Gemini|Flash|Pro)/i.test(raw);
+
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
     const trimmed = line.trim();
 
-    // User prompt line — marks start of real conversation
-    if (trimmed.startsWith('❯')) {
+    // Skip Gemini UI chrome: block chars border and status bar
+    if (isGemini && /^[▀▄█\s]+$/.test(trimmed)) continue;
+    if (isGemini && /\/model\s+(Auto|Gemini|Flash|Pro)/i.test(trimmed)) continue;
+    if (isGemini && /YOLO ctrl\+y/.test(trimmed)) continue;
+
+    // User prompt line:
+    //   Claude Code → ❯ text
+    //   Gemini CLI  → " * text" (leading space + asterisk)
+    const isGeminiUser = isGemini && /^\*\s+\S/.test(trimmed) && !trimmed.startsWith('**');
+    const isUserPrompt = trimmed.startsWith('❯') || isGeminiUser;
+    if (isUserPrompt) {
       seenPrompt = true;
       flush();
-      const text = trimmed.startsWith('❯ ') ? trimmed.slice(2).trim() : '';
+      let text = '';
+      if (trimmed.startsWith('❯ ')) text = trimmed.slice(2).trim();
+      else if (isGeminiUser) text = trimmed.replace(/^\*\s+/, '').trim();
       if (text) turns.push({ role: 'user', text });
       continue;
     }

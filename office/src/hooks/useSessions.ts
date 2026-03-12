@@ -175,8 +175,16 @@ export function useSessions() {
               const lines = text.split("\n").filter((l: string) => l.trim());
               const bottom5 = lines.slice(-5).join("\n");
               const bottom15 = lines.slice(-15).join("\n"); // wider scan for spinners above status bar
-              const hasPrompt = bottom5.includes("\u276f"); // ❯
-              const hasBusySign = /[∴✢⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏◐◑◒◓⣾⣽⣻⢿⡿⣟⣯⣷]/.test(bottom15) || /● \w+\(/.test(bottom15) || /\b(Read|Edit|Write|Bash|Grep|Glob|Agent)\b/.test(bottom15) || /Spelunking|thinking|Running/.test(bottom15);
+              const bottom2 = lines.slice(-2).join("\n");
+              // Gemini CLI: "ready" = status bar with /model visible at bottom
+              // Claude Code: "ready" = ❯ prompt visible
+              const isGemini = /\/model\s+(Auto|Gemini|Flash|Pro)/i.test(bottom5);
+              const hasPrompt = isGemini
+                ? /\/model\s+(Auto|Gemini|Flash|Pro)/i.test(bottom2)   // Gemini at prompt = model bar visible
+                : bottom2.includes("\u276f");                            // Claude ❯
+              const hasBusySign = /[∴✢⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏◐◑◒◓⣾⣽⣻⢿⡿⣟⣯⣷]/.test(bottom15) || /● \w+\(/.test(bottom15) || /\b(Read|Edit|Write|Bash|Grep|Glob|Agent)\b/.test(bottom15) || /Spelunking|thinking|Running/.test(bottom15)
+                // Gemini: busy when content changed AND model bar not at bottom yet (still typing)
+                || (isGemini && entry.unchangedCount === 0 && !/\/model\s+(Auto|Gemini|Flash|Pro)/i.test(bottom2));
               const bottom = bottom5; // keep for preview
 
               // Determine status

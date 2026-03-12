@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>LOKI PIXFICE — TERMINAL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -60,6 +60,102 @@
   }
   .header-nav a:hover { color: #8090c0; }
   .header-nav a.active { color: #5a8cff; border-bottom-color: #5a8cff; }
+
+  /* Hamburger button */
+  .menu-btn {
+    display: none;
+    background: none;
+    border: 1px solid #2a3a50;
+    color: #8090c0;
+    font-size: 18px;
+    padding: 4px 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .menu-btn.open { background: #5a8cff20; border-color: #5a8cff60; color: #5a8cff; }
+
+  /* Dropdown */
+  .nav-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: #0a0b16;
+    border-bottom: 2px solid #1e2840;
+    z-index: 100;
+    flex-direction: column;
+  }
+  .nav-dropdown.open { display: flex; }
+  .nav-dropdown a {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px;
+    text-decoration: none;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #5a6a80;
+    border-left: 3px solid transparent;
+    border-bottom: 1px solid #1a2030;
+    transition: background 0.1s;
+  }
+  .nav-dropdown a.active { color: #5a8cff; background: #5a8cff10; border-left-color: #5a8cff; }
+  .nav-dropdown a:hover { background: #0e1020; }
+  .nav-dropdown a .nav-icon { font-size: 18px; }
+
+  /* Sidebar toggle button (mobile only) */
+  .sidebar-btn {
+    display: none;
+    background: none;
+    border: 1px solid #2a3a50;
+    color: #8090c0;
+    font-size: 16px;
+    padding: 4px 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .sidebar-btn.open { background: #5a8cff20; border-color: #5a8cff60; color: #5a8cff; }
+
+  @media (max-width: 640px) {
+    /* Header */
+    .header { padding: 8px 12px; gap: 8px; position: relative; flex-wrap: nowrap; overflow: hidden; }
+    .header-title .main { font-size: 10px; letter-spacing: 1px; }
+    .header-title .sub { display: none; }
+    .header-divider { display: none; }
+    .header-target { display: none; }
+    .header-nav { display: none; }
+    .header-status .label { display: none; }
+    .menu-btn { display: block; }
+    .sidebar-btn { display: block; }
+
+    /* Container full width */
+    .container { height: calc(100vh - 50px); overflow: hidden; }
+
+    /* Sidebar hidden by default, overlays from left */
+    .sidebar {
+      position: fixed;
+      top: 50px;
+      left: -220px;
+      bottom: 0;
+      width: 200px;
+      z-index: 80;
+      transition: left 0.2s ease;
+      border-right: 2px solid #1e2840;
+    }
+    .sidebar.open { left: 0; }
+
+    /* Terminal takes full width */
+    .term { width: 100%; }
+    .term-output { font-size: 12px; padding: 8px 10px; }
+
+    /* Fix iOS auto-zoom on input tap (must be >= 16px) */
+    .term-input-line { font-size: 16px; padding: 10px 10px; }
+    .term-input-line .prompt { font-size: 16px; }
+
+    /* Key bar scrolls horizontally */
+    .key-bar { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; padding: 5px 8px; }
+    .key-bar::-webkit-scrollbar { display: none; }
+  }
   .header-status { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .header-status .dot {
     width: 10px; height: 10px;
@@ -181,7 +277,7 @@
 </head>
 <body>
 
-<div class="header">
+<div class="header" id="header">
   <div class="header-logo"></div>
   <div class="header-title">
     <span class="main">LOKI PIXFICE</span>
@@ -202,6 +298,16 @@
   <div class="header-status" id="statusWrap">
     <div class="dot" id="statusDot"></div>
     <span class="label" id="statusLabel">DISC</span>
+  </div>
+  <button class="sidebar-btn" id="sidebarBtn" onclick="toggleSidebar()">☰</button>
+  <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">⋯</button>
+  <div class="nav-dropdown" id="navDropdown">
+    <a href="/office/#office"><span class="nav-icon">🏢</span>OFFICE</a>
+    <a href="/office/#fleet"><span class="nav-icon">🚀</span>FLEET</a>
+    <a href="/office/#mission"><span class="nav-icon">🌌</span>MISSION</a>
+    <a href="/office/#overview"><span class="nav-icon">📊</span>OVERVIEW</a>
+    <a href="/office/#game"><span class="nav-icon">🎮</span>GAME</a>
+    <a href="/" class="active"><span class="nav-icon">💻</span>TERMINAL</a>
   </div>
 </div>
 
@@ -238,6 +344,46 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── Mobile sidebar toggle ────────────────────────────────────────────────────
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const btn = document.getElementById('sidebarBtn');
+  const open = sidebar.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.textContent = open ? '✕' : '☰';
+}
+// Close sidebar on outside tap
+document.addEventListener('click', (e) => {
+  const sidebar = document.getElementById('sidebar');
+  const btn = document.getElementById('sidebarBtn');
+  if (!sidebar || !btn) return;
+  if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== btn) {
+    sidebar.classList.remove('open');
+    btn.classList.remove('open');
+    btn.textContent = '☰';
+  }
+});
+
+// ── Mobile menu ──────────────────────────────────────────────────────────────
+function toggleMenu() {
+  const btn = document.getElementById('menuBtn');
+  const dd  = document.getElementById('navDropdown');
+  const open = dd.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.textContent = open ? '✕' : '☰';
+}
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('navDropdown');
+  const btn = document.getElementById('menuBtn');
+  if (!dd || !btn) return;
+  if (!dd.contains(e.target) && e.target !== btn) {
+    dd.classList.remove('open');
+    btn.classList.remove('open');
+    btn.textContent = '☰';
+  }
+});
+
 // ANSI
 const AC = ['#000','#c00','#0a0','#c50','#00c','#c0c','#0cc','#ccc','#555','#f55','#5f5','#ff5','#55f','#f5f','#5ff','#fff'];
 function a256(n) {
@@ -351,6 +497,13 @@ function selectWindow(target, name) {
   el('term').focus();
   // Persist selection in URL hash
   location.hash = encodeURIComponent(target);
+  // Auto-close sidebar on mobile after selecting a window
+  const sidebar = document.getElementById('sidebar');
+  const sidebarBtn = document.getElementById('sidebarBtn');
+  if (sidebar && sidebar.classList.contains('open')) {
+    sidebar.classList.remove('open');
+    if (sidebarBtn) { sidebarBtn.classList.remove('open'); sidebarBtn.textContent = '☰'; }
+  }
 }
 
 // Keyboard → tmux (queue-based)

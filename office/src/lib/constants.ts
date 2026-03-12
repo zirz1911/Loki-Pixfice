@@ -33,8 +33,10 @@ export const NORSE_AGENTS: Record<string, { color: string; emoji: string }> = {
   "heimdall": { color: '#14b8a6', emoji: '🌈' },
   "tyr":      { color: '#ef4444', emoji: '⚔️' },
   "ymir":     { color: '#94a3b8', emoji: '🏔️' },
-  "huginn":   { color: '#3b82f6', emoji: '🦅' },
-  "muninn":   { color: '#6366f1', emoji: '🪶' },
+  "huginn":     { color: '#3b82f6', emoji: '🦅' },
+  "muninn":     { color: '#6366f1', emoji: '🪶' },
+  "freyr":      { color: '#f0c020', emoji: '⚜️' },
+  "loki-gemini":{ color: '#00e5ff', emoji: '💎' },
 };
 
 export const AGENT_COLORS = [
@@ -51,7 +53,10 @@ export function agentColor(name: string): string {
 }
 
 export function agentEmoji(name: string): string {
-  const key = name.toLowerCase().replace(/-oracle$/, '');
+  const lower = name.toLowerCase();
+  // Direct match first (handles loki-gemini etc.)
+  if (NORSE_AGENTS[lower]) return NORSE_AGENTS[lower].emoji;
+  const key = lower.replace(/-oracle$/, '');
   return NORSE_AGENTS[key]?.emoji ?? '';
 }
 
@@ -68,7 +73,8 @@ const TERMINAL_NAMES = new Set(["comfyui", "dl-models", "server", "jupyter", "ol
 const LOCAL_NAMES    = new Set(["thor", "huginn", "heimdall", "tyr", "muninn"]);
 // Cloud-only agents (no local model available)
 // loki = main Oracle identity (cloud-only, like odin)
-const CLOUD_NAMES    = new Set(["odin", "ymir", "loki"]);
+// freyr = main Oracle identity (cloud-only, like loki)
+const CLOUD_NAMES    = new Set(["odin", "ymir", "loki", "freyr"]);
 
 export function agentCategory(name: string): AgentCategory {
   const k = name.toLowerCase().replace(/-oracle$/, "");

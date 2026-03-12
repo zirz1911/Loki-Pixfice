@@ -9,22 +9,28 @@ const PS = 5; // pixel size in SVG units
 
 interface Pal { H:string; S:string; E:string; P:string; M:string; W:string; C:string; A:string; L:string; B:string }
 const PALS: Record<string, Pal> = {
-  default:  { H:'#6b3a2a',S:'#fde2c8',E:'#ffffff',P:'#2c1b0e',M:'#5a2020',W:'#c8a070',C:'#4a7a2c',A:'#6aaa4c',L:'#4060a0',B:'#2a3070' },
-  odin:     { H:'#c8a830',S:'#d4956b',E:'#ffffff',P:'#1a1008',M:'#603020',W:'#e0c080',C:'#1e1040',A:'#f5c518',L:'#2c1848',B:'#180830' },
-  thor:     { H:'#d4b050',S:'#fde2c8',E:'#ffffff',P:'#1a1040',M:'#503020',W:'#fae8c8',C:'#2050a8',A:'#4fc3f7',L:'#183080',B:'#102060' },
-  loki:     { H:'#1a0a30',S:'#c88060',E:'#ffffff',P:'#3a1060',M:'#501840',W:'#d0a0b0',C:'#5a2080',A:'#c060e0',L:'#3a1060',B:'#200840' },
-  heimdall: { H:'#d4c080',S:'#fde2c8',E:'#ffffff',P:'#103830',M:'#305040',W:'#e8f0e8',C:'#1a6858',A:'#40d0b0',L:'#0e3838',B:'#082828' },
-  tyr:      { H:'#802020',S:'#fde2c8',E:'#ffffff',P:'#401010',M:'#601010',W:'#f0d0d0',C:'#802020',A:'#ff6060',L:'#601010',B:'#400808' },
-  ymir:     { H:'#a0c0d8',S:'#c0d8f0',E:'#90b8d0',P:'#304858',M:'#4a6878',W:'#d0e8f8',C:'#4878a0',A:'#90d0f8',L:'#305070',B:'#203040' },
+  default:      { H:'#6b3a2a',S:'#fde2c8',E:'#ffffff',P:'#2c1b0e',M:'#5a2020',W:'#c8a070',C:'#4a7a2c',A:'#6aaa4c',L:'#4060a0',B:'#2a3070' },
+  odin:         { H:'#c8a830',S:'#d4956b',E:'#ffffff',P:'#1a1008',M:'#603020',W:'#e0c080',C:'#1e1040',A:'#f5c518',L:'#2c1848',B:'#180830' },
+  thor:         { H:'#d4b050',S:'#fde2c8',E:'#ffffff',P:'#1a1040',M:'#503020',W:'#fae8c8',C:'#2050a8',A:'#4fc3f7',L:'#183080',B:'#102060' },
+  loki:         { H:'#1a0a30',S:'#c88060',E:'#ffffff',P:'#3a1060',M:'#501840',W:'#d0a0b0',C:'#5a2080',A:'#c060e0',L:'#3a1060',B:'#200840' },
+  heimdall:     { H:'#d4c080',S:'#fde2c8',E:'#ffffff',P:'#103830',M:'#305040',W:'#e8f0e8',C:'#1a6858',A:'#40d0b0',L:'#0e3838',B:'#082828' },
+  tyr:          { H:'#802020',S:'#fde2c8',E:'#ffffff',P:'#401010',M:'#601010',W:'#f0d0d0',C:'#802020',A:'#ff6060',L:'#601010',B:'#400808' },
+  ymir:         { H:'#a0c0d8',S:'#c0d8f0',E:'#90b8d0',P:'#304858',M:'#4a6878',W:'#d0e8f8',C:'#4878a0',A:'#90d0f8',L:'#305070',B:'#203040' },
+  huginn:       { H:'#181830',S:'#fde2c8',E:'#ffffff',P:'#0a0820',M:'#502828',W:'#c8d0f0',C:'#1e3870',A:'#4a90d0',L:'#182058',B:'#101438' },
+  freyr:        { H:'#c8a030',S:'#f0d8a0',E:'#ffffff',P:'#2a1808',M:'#5a3010',W:'#ffe080',C:'#3a7020',A:'#f0c020',L:'#285018',B:'#1a3010' },
+  'loki-gemini':{ H:'#004d6b',S:'#c8e8f0',E:'#ffffff',P:'#002840',M:'#003850',W:'#80e0ff',C:'#006080',A:'#00e5ff',L:'#004060',B:'#002030' },
 };
 const SPRS: Record<string, string[]> = {
-  odin:     ['0AAAAA00','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
-  thor:     ['0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CAAACCCC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
-  loki:     ['0HHHHHH0','HHHHHHH0','H0SSSSS0','0SEPPSS0','0SSSSSS0','0SWMSSS0','0CCCCCC0','CCAACCCC','CCAAC000','0CCCCCC0','0LL00LL0','0BB00BB0'],
-  heimdall: ['0HAAHH00','0HHHHHH0','0SSSSSS0','0SEEPSS0','0SEEPSS0','0SSMSSS0','0CCCCCC0','CAACCACC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
-  tyr:      ['0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','ACCCCC00','0CCCCCC0','0LL00LL0','0BB00BB0'],
-  ymir:     ['HHHHHHH0','HHHHHHH0','HSSSSSS0','HSEPPSS0','HSSSSSS0','HSSMWSS0','HCCCCCCH','CAAACCCA','CCAACCCA','HCCCCCCH','HLL00LLH','HBB00BBH'],
-  default:  ['00HHHH00','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','CCCCCCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  odin:         ['0AAAAA00','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  thor:         ['0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CAAACCCC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  loki:         ['0HHHHHH0','HHHHHHH0','H0SSSSS0','0SEPPSS0','0SSSSSS0','0SWMSSS0','0CCCCCC0','CCAACCCC','CCAAC000','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  heimdall:     ['0HAAHH00','0HHHHHH0','0SSSSSS0','0SEEPSS0','0SEEPSS0','0SSMSSS0','0CCCCCC0','CAACCACC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  tyr:          ['0HHHHHH0','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','ACCCCC00','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  ymir:         ['HHHHHHH0','HHHHHHH0','HSSSSSS0','HSEPPSS0','HSSSSSS0','HSSMWSS0','HCCCCCCH','CAAACCCA','CCAACCCA','HCCCCCCH','HLL00LLH','HBB00BBH'],
+  huginn:       ['0HHHHHH0','HHAHHHH0','0SSSSSS0','0AEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','CAHACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  freyr:        ['0AAAAAA0','0HHHHHH0','H0SSSSSH','0SEPPSS0','0SSSSSS0','0SWMSSS0','0CCCCCC0','CAACCACC','CCAACCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
+  'loki-gemini':['0AAAAAA0','0HHHHHH0','0SSSSSS0','0AEPPAS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CAACCACC','CCAACCCC','0ACCCCA0','0LL00LL0','0BB00BB0'],
+  default:      ['00HHHH00','0HHHHHH0','0SSSSSS0','0SEPPSS0','0SSSSSS0','0SSMSSS0','0CCCCCC0','CCAACCCC','CCCCCCCC','0CCCCCC0','0LL00LL0','0BB00BB0'],
 };
 
 function buildSvgPixels(rows: string[], pal: Pal) {
@@ -49,7 +55,10 @@ function SvgAgentCircle({
   onClick?: () => void; onMouseEnter?: () => void; onMouseLeave?: () => void;
 }) {
   const key = name.toLowerCase().replace(/-oracle$/, "");
-  const pk = Object.keys(PALS).find(k => k !== "default" && key.startsWith(k)) ?? "default";
+  // Exact match first, then prefix match (prevents "loki" matching "loki-gemini")
+  const pk = Object.keys(PALS).find(k => k !== "default" && k === key)
+    ?? Object.keys(PALS).find(k => k !== "default" && key.startsWith(k))
+    ?? "default";
   const pal = PALS[pk];
   const rows = SPRS[pk] ?? SPRS.default;
   const pixels = buildSvgPixels(rows, pal);

@@ -25,18 +25,30 @@ function agentNameFromTarget(target: string): string {
   return target;
 }
 
+const CHAT_LAST_KEY = "pixfice:chat:lastTarget";
+
 export function useChat(agents: AgentState[], send: (msg: object) => void) {
-  const [selectedTarget, setSelectedTarget] = useState<string>("");
+  const [selectedTarget, setSelectedTarget] = useState<string>(
+    () => localStorage.getItem(CHAT_LAST_KEY) ?? ""
+  );
   const [parsedMsgs, setParsedMsgs] = useState<ChatMsg[]>([]);
   const [pendingMsgs, setPendingMsgs] = useState<ChatMsg[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-select Loki first, fallback to first agent
+  // Persist selected target to localStorage
   useEffect(() => {
-    if (!selectedTarget && agents.length > 0) {
-      const loki = agents.find((a) => a.name.toLowerCase().replace(/-oracle$/, "") === "loki");
-      setSelectedTarget(loki ? loki.target : agents[0].target);
-    }
+    if (selectedTarget) localStorage.setItem(CHAT_LAST_KEY, selectedTarget);
+  }, [selectedTarget]);
+
+  // Auto-select: restore last target if still valid, else loki, else first agent
+  useEffect(() => {
+    if (!agents.length) return;
+    if (selectedTarget && agents.some((a) => a.target === selectedTarget)) return;
+    const last = localStorage.getItem(CHAT_LAST_KEY);
+    const restored = last ? agents.find((a) => a.target === last) : null;
+    if (restored) { setSelectedTarget(restored.target); return; }
+    const loki = agents.find((a) => a.name.toLowerCase().replace(/-oracle$/, "") === "loki");
+    setSelectedTarget(loki ? loki.target : agents[0].target);
   }, [agents, selectedTarget]);
 
   // Resolve agent name from target
@@ -89,7 +101,8 @@ export function useChat(agents: AgentState[], send: (msg: object) => void) {
     (text: string) => {
       if (!text.trim() || !selectedTarget) return;
 
-      // 1. Send via WebSocket
+      // 1. Send via WebSocket + remember as last chatted
+      localStorage.setItem(CHAT_LAST_KEY, selectedTarget);
       send({ type: "send", target: selectedTarget, text });
 
       // 2. Add pending message immediately

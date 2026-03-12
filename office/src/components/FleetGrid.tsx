@@ -92,8 +92,9 @@ export const FleetGrid = memo(function FleetGrid({
   const isCollapsed = useCallback((key: string) => collapsed.includes(key), [collapsed]);
 
   useEffect(() => {
-    const busyAgentsData = agents.filter(a => a.status === "busy").map(a => ({ target: a.target, name: a.name, session: a.session }));
-    if (busyAgentsData.length > 0) markBusy(busyAgentsData);
+    // Track both busy AND ready agents (ready = just finished) so Recently Active stays fresh
+    const activeAgentsData = agents.filter(a => a.status !== "idle").map(a => ({ target: a.target, name: a.name, session: a.session }));
+    if (activeAgentsData.length > 0) markBusy(activeAgentsData);
     pruneRecent();
   }, [agents, markBusy, pruneRecent]);
 
