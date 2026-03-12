@@ -1,6 +1,6 @@
 import { memo, useState, useEffect, useRef, useMemo } from "react";
 import { ansiToHtml, processCapture } from "../lib/ansi";
-import { roomStyle } from "../lib/constants";
+import { roomStyle, agentCategory, CATEGORY_ROOM, type AgentCategory } from "../lib/constants";
 import { useFps } from "./FpsCounter";
 import { useViewport } from "../hooks/useViewport";
 import type { AgentState, Session } from "../lib/types";
@@ -171,13 +171,30 @@ export const OverviewGrid = memo(function OverviewGrid({
   const idleCount = agents.length - busyCount - readyCount;
 
   const sessionGroups = useMemo(() => {
+    // First group by session
     const map = new Map<string, AgentState[]>();
     for (const a of agents) {
       const arr = map.get(a.session) || [];
       arr.push(a);
       map.set(a.session, arr);
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }));
+    // Split sessions with multiple categories into virtual groups
+    const ORDER: AgentCategory[] = ["local", "cloud", "gemini", "terminal"];
+    const result: [string, AgentState[], { accent: string; label: string } | null][] = [];
+    for (const [sessionName, sessionAgents] of map) {
+      const cats = new Set(sessionAgents.map(a => agentCategory(a.name)));
+      if (cats.size <= 1) {
+        result.push([sessionName, sessionAgents, null]);
+      } else {
+        for (const cat of ORDER) {
+          const ag = sessionAgents.filter(a => agentCategory(a.name) === cat);
+          if (ag.length === 0) continue;
+          const cr = CATEGORY_ROOM[cat];
+          result.push([`${sessionName}:${cat}`, ag, { accent: cr.accent, label: cr.label }]);
+        }
+      }
+    }
+    return result.sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }));
   }, [agents]);
 
   return (
@@ -193,7 +210,7 @@ export const OverviewGrid = memo(function OverviewGrid({
           <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 9, letterSpacing: 4, fontFamily: "'Press Start 2P', monospace" }}>
             OVERVIEW
           </span>
-          <span style={{ color: "rgba(255,255,255,0.6)" }}>{sessions.length} rooms</span>
+          <span style={{ color: "rgba(255,255,255,0.6)" }}>{sessionGroups.length} rooms</span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{agents.length} agents</span>
           {!isMobile && <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>}
@@ -222,19 +239,21 @@ export const OverviewGrid = memo(function OverviewGrid({
 
       {/* Session groups */}
       <div style={{ maxWidth: 1600, margin: "0 auto", padding: isMobile ? "12px" : "24px", display: "flex", flexDirection: "column", gap: 24 }}>
-        {sessionGroups.map(([sessionName, sessionAgents]) => {
-          const style = roomStyle(sessionName);
-          const hasBusy = sessionAgents.some(a => a.status === "busy");
-          const num = sessionNum(sessionName);
+        {sessionGroups.map(([groupKey, groupAgents, catOverride]) => {
+          const baseStyle = roomStyle(groupKey);
+          const accent = catOverride?.accent ?? baseStyle.accent;
+          const displayLabel = catOverride?.label ?? groupKey;
+          const hasBusy = groupAgents.some(a => a.status === "busy");
+          const num = sessionNum(groupKey);
           return (
-            <section key={sessionName}>
+            <section key={groupKey}>
               {/* Session header */}
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, padding: "0 4px" }}>
                 <kbd style={{
                   width: 24, height: 24, flexShrink: 0,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: 5, fontSize: 9, fontWeight: "bold", fontFamily: "monospace",
-                  background: `${style.accent}15`, color: `${style.accent}80`, border: `1px solid ${style.accent}25`,
+                  background: `${accent}15`, color: `${accent}80`, border: `1px solid ${accent}25`,
                 }}>
                   {num >= 0 ? num : "·"}
                 </kbd>
@@ -245,17 +264,22 @@ export const OverviewGrid = memo(function OverviewGrid({
                 }} />
                 <h3 style={{
                   fontSize: 10, fontWeight: "bold", letterSpacing: 3,
-                  color: style.accent, fontFamily: "'Press Start 2P', monospace",
+                  color: accent, fontFamily: "'Press Start 2P', monospace",
                   textTransform: "uppercase", margin: 0,
                 }}>
-                  {sessionName}
+                  {displayLabel}
                 </h3>
+                {catOverride && (
+                  <span style={{ fontSize: 8, fontFamily: "monospace", color: `${accent}60`, letterSpacing: 2, textTransform: "uppercase" }}>
+                    {groupKey.split(":")[1]}
+                  </span>
+                )}
                 <span style={{
                   fontSize: 9, fontFamily: "monospace",
                   padding: "2px 8px", borderRadius: 4,
-                  background: `${style.accent}18`, color: style.accent,
+                  background: `${accent}18`, color: accent,
                 }}>
-                  {sessionAgents.length} agent{sessionAgents.length > 1 ? "s" : ""}
+                  {groupAgents.length} agent{groupAgents.length > 1 ? "s" : ""}
                 </span>
               </div>
 
@@ -265,11 +289,11 @@ export const OverviewGrid = memo(function OverviewGrid({
                 gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(auto-fill, minmax(280px, 1fr))" : "repeat(auto-fill, minmax(340px, 1fr))",
                 gap: 12,
               }}>
-                {sessionAgents.map((agent, i) => (
+                {groupAgents.map((agent, i) => (
                   <OverviewTile
                     key={agent.target}
                     agent={agent}
-                    accent={style.accent}
+                    accent={accent}
                     shortcutKey={i + 1}
                     onClick={() => onSelectAgent(agent)}
                   />

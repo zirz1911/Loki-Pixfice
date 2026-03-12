@@ -1,7 +1,7 @@
 import { memo, useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { HoverPreviewCard } from "./HoverPreviewCard";
 import { Joystick } from "./Joystick";
-import { roomStyle, NORSE_AGENTS, agentColor } from "../lib/constants";
+import { roomStyle, NORSE_AGENTS, agentColor, agentCategory, CATEGORY_ROOM, type AgentCategory } from "../lib/constants";
 import type { AgentState, Session, PaneStatus, AgentEvent } from "../lib/types";
 
 // ── Pixel sprite data (matches AgentAvatar.tsx) ───────────────────────────────
@@ -280,19 +280,33 @@ export const MissionControl = memo(function MissionControl({
     return map;
   }, [agents]);
 
-  // Layout: arrange sessions in a hex-ish grid
-  // Each session is a cluster of agents
+  // Layout: arrange sessions in a radial grid, split multi-category sessions
   const layout = useMemo(() => {
-    const sessionList = sessions.map((s) => ({
-      session: s,
-      agents: sessionAgents.get(s.name) || [],
-      style: roomStyle(s.name),
-    }));
+    const ORDER: AgentCategory[] = ["local", "cloud", "gemini", "terminal"];
+    type VSession = { session: Session; agents: AgentState[]; style: ReturnType<typeof roomStyle> };
+    const sessionList: VSession[] = [];
 
-    // Calculate positions in a radial layout — fill the viewport
+    for (const s of sessions) {
+      const sa = sessionAgents.get(s.name) || [];
+      const cats = new Set(sa.map(a => agentCategory(a.name)));
+      if (cats.size <= 1) {
+        sessionList.push({ session: s, agents: sa, style: roomStyle(s.name) });
+      } else {
+        for (const cat of ORDER) {
+          const catAgents = sa.filter(a => agentCategory(a.name) === cat);
+          if (catAgents.length === 0) continue;
+          const cr = CATEGORY_ROOM[cat];
+          sessionList.push({
+            session: { name: `${s.name}:${cat}`, windows: s.windows },
+            agents: catAgents,
+            style: { label: cr.label, accent: cr.accent, floor: cr.floor, wall: cr.wall, dark: cr.dark },
+          });
+        }
+      }
+    }
+
     const cx = 600, cy = 500;
     const radius = Math.min(320, 160 + sessionList.length * 22);
-
     return sessionList.map((s, i) => {
       const angle = (i / sessionList.length) * Math.PI * 2 - Math.PI / 2;
       const x = cx + Math.cos(angle) * radius;

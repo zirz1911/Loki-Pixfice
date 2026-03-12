@@ -20,8 +20,9 @@ OFFICE_DIR=/home/paji/Project/Loki-Pixfice
 # Format: "name:workdir:command"
 AGENTS=(
   "odin:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "thor:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "loki:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "thor:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "huginn:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "heimdall:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "tyr:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "ymir:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"

@@ -20,6 +20,31 @@ const ROOM_STYLES: Record<string, RoomStyle> = {
     floor1: "#141c2c", floor2: "#101828",
     wallColor: "#1e2a44",
   },
+  // Virtual category rooms — split by agent type (see Loki-Oracle README)
+  "loki-oracle:local": {
+    label: "JOTUNHEIM", dept: "Local (Qwen)",
+    accent: "#4fc3f7", headerBg: "#001828",
+    floor1: "#001c30", floor2: "#001424",
+    wallColor: "#002840",
+  },
+  "loki-oracle:cloud": {
+    label: "ASGARD", dept: "Cloud Only",
+    accent: "#f5c518", headerBg: "#120e00",
+    floor1: "#1c1800", floor2: "#161200",
+    wallColor: "#2a2200",
+  },
+  "loki-oracle:gemini": {
+    label: "VALHALLA", dept: "Gemini",
+    accent: "#00e5ff", headerBg: "#001820",
+    floor1: "#001c28", floor2: "#001420",
+    wallColor: "#002a38",
+  },
+  "loki-oracle:terminal": {
+    label: "MIDGARD", dept: "Terminals",
+    accent: "#69f0ae", headerBg: "#001408",
+    floor1: "#001c0c", floor2: "#001408",
+    wallColor: "#002a14",
+  },
   midgard: {
     label: "MIDGARD", dept: "Development",
     accent: "#4ac85a", headerBg: "#0a180f",
@@ -66,6 +91,12 @@ const FALLBACK_STYLES: RoomStyle[] = [
 export function getRoomStyle(sessionName: string, idx = 0): RoomStyle {
   if (ROOM_STYLES[sessionName]) return ROOM_STYLES[sessionName];
   const n = sessionName.toLowerCase();
+  // Category virtual rooms (e.g. "loki-oracle:local")
+  if (n.endsWith(":local"))    return ROOM_STYLES["loki-oracle:local"];
+  if (n.endsWith(":cloud"))    return ROOM_STYLES["loki-oracle:cloud"];
+  if (n.endsWith(":gemini"))   return ROOM_STYLES["loki-oracle:gemini"];
+  if (n.endsWith(":terminal")) return ROOM_STYLES["loki-oracle:terminal"];
+  // Session name fallbacks
   if (n.includes("oracle") || n.includes("odin")) return ROOM_STYLES["loki-oracle"];
   if (n.includes("mid")) return ROOM_STYLES.midgard;
   if (n.includes("jotun")) return ROOM_STYLES.jotunheim;

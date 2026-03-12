@@ -4,6 +4,7 @@ import { DepartmentRoom } from "./DepartmentRoom";
 import { ChatPanel } from "./ChatPanel";
 import { UniverseBg } from "./UniverseBg";
 import { useViewport } from "../hooks/useViewport";
+import { agentCategory, type AgentCategory } from "../lib/constants";
 import type { AgentState, Session } from "../lib/types";
 import type { ActivityMsg } from "../hooks/useMessages";
 
@@ -220,15 +221,29 @@ export const PixelOfficeView = memo(function PixelOfficeView({
   const { isMobile, isTablet } = useViewport();
   const [chatOpen, setChatOpen] = useState(false);
 
-  const sessionAgents = useMemo(() => {
-    const map = new Map<string, AgentState[]>();
-    for (const a of agents) {
-      const arr = map.get(a.session) ?? [];
-      arr.push(a);
-      map.set(a.session, arr);
+  // Build virtual rooms: split multi-category sessions by agent type
+  const virtualRooms = useMemo(() => {
+    type VRoom = { key: string; session: Session; agents: AgentState[]; idx: number };
+    const result: VRoom[] = [];
+    let idx = 0;
+    for (const s of sessions) {
+      const sa = agents.filter(a => a.session === s.name);
+      // Check if session has multiple categories
+      const cats = new Set(sa.map(a => agentCategory(a.name)));
+      if (cats.size <= 1) {
+        result.push({ key: s.name, session: s, agents: sa, idx: idx++ });
+      } else {
+        const ORDER: AgentCategory[] = ["local", "cloud", "gemini", "terminal"];
+        for (const cat of ORDER) {
+          const catAgents = sa.filter(a => agentCategory(a.name) === cat);
+          if (catAgents.length === 0) continue;
+          const virtualSession: Session = { name: `${s.name}:${cat}`, windows: s.windows };
+          result.push({ key: `${s.name}:${cat}`, session: virtualSession, agents: catAgents, idx: idx++ });
+        }
+      }
     }
-    return map;
-  }, [agents]);
+    return result;
+  }, [sessions, agents]);
 
   // Responsive grid columns
   const gridCols = isMobile
@@ -289,7 +304,7 @@ export const PixelOfficeView = memo(function PixelOfficeView({
           padding: isMobile ? "12px 10px" : "16px 20px",
           paddingBottom: isMobile ? 80 : 16,
         }}>
-          {sessions.length === 0 ? (
+          {virtualRooms.length === 0 ? (
             <div style={{
               display: "flex", flexDirection: "column", alignItems: "center",
               justifyContent: "center", height: "60%", gap: 20,
@@ -301,12 +316,12 @@ export const PixelOfficeView = memo(function PixelOfficeView({
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: isMobile ? "12px" : "18px" }}>
-              {sessions.map((s, i) => (
+              {virtualRooms.map(({ key, session, agents: ra, idx }) => (
                 <DepartmentRoom
-                  key={s.name}
-                  session={s}
-                  agents={sessionAgents.get(s.name) ?? []}
-                  sessionIdx={i}
+                  key={key}
+                  session={session}
+                  agents={ra}
+                  sessionIdx={idx}
                   onSelectAgent={onSelectAgent}
                   isMobile={isMobile}
                   saiyanTargets={saiyanTargets}

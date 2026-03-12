@@ -170,12 +170,12 @@ export const StageSection = memo(function StageSection({
                   width: SIZE_BIG - 16, height: SIZE_BIG, pointerEvents: "none",
                   background: `radial-gradient(ellipse at 50% 0%, ${rs.accent}15 0%, transparent 70%)`,
                 }} />
-                <svg viewBox="-40 -50 80 80" width={SIZE_BIG} height={SIZE_BIG} overflow="visible">
+                <div style={{ width: SIZE_BIG, height: SIZE_BIG, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <AgentAvatar
                     name={agent.name} target={agent.target} status={agent.status}
                     preview={agent.preview} accent={rs.accent} saiyan={isSaiyan} onClick={() => {}}
                   />
-                </svg>
+                </div>
                 <span style={{
                   fontSize: 12, fontWeight: 600, textAlign: "center",
                   maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -222,13 +222,12 @@ export const StageSection = memo(function StageSection({
                 }}
                 onClick={(e) => onAgentClick(agent, rs.accent, rs.label, e)}
               >
-                <svg viewBox="-40 -50 80 80" width={size} height={size} overflow="visible"
-                  style={{ transition: "width 2s ease-out, height 2s ease-out" }}>
+                <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", transition: "width 2s ease-out, height 2s ease-out" }}>
                   <AgentAvatar
                     name={agent.name} target={agent.target} status={agent.status}
                     preview={agent.preview} accent={rs.accent} saiyan={false} onClick={() => {}}
                   />
-                </svg>
+                </div>
                 <span style={{
                   fontWeight: 600, textAlign: "center", color: "#64748B",
                   fontSize: size > 80 ? 12 : 10, maxWidth: size > 80 ? 120 : 76,

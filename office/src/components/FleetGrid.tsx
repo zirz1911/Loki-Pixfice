@@ -4,7 +4,7 @@ import { MiniPreview } from "./MiniPreview";
 import { StageSection } from "./StageSection";
 import { AgentRow } from "./AgentRow";
 import type { FeedLogEntry } from "./AgentRow";
-import { roomStyle, PREVIEW_CARD } from "../lib/constants";
+import { roomStyle, PREVIEW_CARD, agentCategory, CATEGORY_ROOM, type AgentCategory } from "../lib/constants";
 import { BottomStats } from "./BottomStats";
 import { useFps } from "./FpsCounter";
 import { useViewport } from "../hooks/useViewport";
@@ -156,28 +156,41 @@ export const FleetGrid = memo(function FleetGrid({
 
   const sorted = useMemo(() => sortRooms(sessions, sessionAgents, sortMode), [sessions, sessionAgents, sortMode]);
 
-  type VRoom = { key: string; label: string; accent: string; floor: string; agents: AgentState[]; hasBusy: boolean; busyCount: number };
+  type VRoom = { key: string; label: string; accent: string; floor: string; agents: AgentState[]; hasBusy: boolean; busyCount: number; dept?: string };
+
+  // Split a session's agents into virtual rooms by category
+  function splitByCategory(sessionName: string, agents: AgentState[]): VRoom[] {
+    const buckets = new Map<AgentCategory, AgentState[]>();
+    for (const a of agents) {
+      const cat = agentCategory(a.name);
+      const arr = buckets.get(cat) || [];
+      arr.push(a);
+      buckets.set(cat, arr);
+    }
+    // If only one category — return as single room (no split needed)
+    if (buckets.size <= 1) {
+      const st = roomStyle(sessionName);
+      const ba = agents.filter(a => a.status === "busy");
+      return [{ key: sessionName, label: sessionName, accent: st.accent, floor: st.floor, agents, hasBusy: ba.length > 0, busyCount: ba.length }];
+    }
+    const ORDER: AgentCategory[] = ["local", "cloud", "gemini", "terminal"];
+    return ORDER.flatMap(cat => {
+      const ag = buckets.get(cat);
+      if (!ag || ag.length === 0) return [];
+      const cr = CATEGORY_ROOM[cat];
+      const ba = ag.filter(a => a.status === "busy");
+      return [{ key: `${sessionName}:${cat}`, label: cr.label, dept: cr.dept, accent: cr.accent, floor: cr.floor, agents: ag, hasBusy: ba.length > 0, busyCount: ba.length }];
+    });
+  }
+
   const visualRooms = useMemo((): VRoom[] => {
-    if (!grouped) {
-      return sorted.map(s => {
-        const st = roomStyle(s.name); const ra = sessionAgents.get(s.name) || []; const ba = ra.filter(a => a.status === "busy");
-        return { key: s.name, label: s.name, accent: st.accent, floor: st.floor, agents: ra, hasBusy: ba.length > 0, busyCount: ba.length };
-      });
-    }
-    const multi: VRoom[] = []; const soloAgents: AgentState[] = [];
-    for (const s of sorted) {
-      const st = roomStyle(s.name); const ra = sessionAgents.get(s.name) || []; const ba = ra.filter(a => a.status === "busy");
-      if (ra.length <= 1) soloAgents.push(...ra);
-      else multi.push({ key: s.name, label: s.name, accent: st.accent, floor: st.floor, agents: ra, hasBusy: ba.length > 0, busyCount: ba.length });
-    }
     const result: VRoom[] = [];
-    if (soloAgents.length > 0) {
-      const sb = soloAgents.filter(a => a.status === "busy");
-      result.push({ key: "_oracles", label: "Oracles", accent: "#7e57c2", floor: "#1a1428", agents: soloAgents, hasBusy: sb.length > 0, busyCount: sb.length });
+    for (const s of sorted) {
+      const ra = sessionAgents.get(s.name) || [];
+      result.push(...splitByCategory(s.name, ra));
     }
-    result.push(...multi);
     return result;
-  }, [sorted, sessionAgents, grouped]);
+  }, [sorted, sessionAgents]);
 
   const getAgentFeedLog = useCallback((agentName: string): FeedLogEntry[] | null => {
     if (!agentFeedLog) return null;
@@ -227,7 +240,7 @@ export const FleetGrid = memo(function FleetGrid({
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, fontFamily: "monospace", fontSize: 14 }}>
           <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, letterSpacing: 4, fontFamily: "'Press Start 2P', monospace" }}>FLEET</span>
-          <span style={{ color: "rgba(255,255,255,0.6)" }}>{sessions.length} rooms</span>
+          <span style={{ color: "rgba(255,255,255,0.6)" }}>{visualRooms.length} rooms</span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{agents.length} agents</span>
           {!isMobile && <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>}
@@ -384,13 +397,20 @@ export const FleetGrid = memo(function FleetGrid({
                 background: vr.hasBusy ? "#ffa726" : "#22C55E",
                 boxShadow: vr.hasBusy ? "0 0 10px #ffa726" : "0 0 6px #22C55E",
               }} />
-              <h3 style={{
-                margin: 0, fontSize: 14, fontWeight: "bold", letterSpacing: 4,
-                textTransform: "uppercase", color: vr.accent,
-                fontFamily: "'Press Start 2P', monospace",
-              }}>
-                {vr.label}
-              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <h3 style={{
+                  margin: 0, fontSize: 14, fontWeight: "bold", letterSpacing: 4,
+                  textTransform: "uppercase", color: vr.accent,
+                  fontFamily: "'Press Start 2P', monospace",
+                }}>
+                  {vr.label}
+                </h3>
+                {vr.dept && (
+                  <span style={{ fontSize: 10, fontFamily: "monospace", color: `${vr.accent}80`, letterSpacing: 2, textTransform: "uppercase" }}>
+                    {vr.dept}
+                  </span>
+                )}
+              </div>
               <span style={{
                 fontSize: 12, fontFamily: "monospace", fontWeight: "bold",
                 padding: "4px 10px", borderRadius: 6,

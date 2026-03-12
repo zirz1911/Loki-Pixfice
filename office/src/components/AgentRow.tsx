@@ -88,21 +88,20 @@ export const AgentRow = memo(function AgentRow({
             width: avatarSize, height: avatarSize,
             transition: "width 0.3s, height 0.3s",
             animation: saiyan ? "saiyanPulse 1.5s ease-in-out infinite" : "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
           }}
           onMouseEnter={isTouch ? undefined : (e) => showPreview(agent, accent, roomLabel, e)}
           onMouseLeave={isTouch ? undefined : () => hidePreview()}
         >
-          <svg viewBox="-40 -50 80 80" width={avatarSize} height={avatarSize} overflow="visible">
-            <AgentAvatar
-              name={agent.name}
-              target={agent.target}
-              status={agent.status}
-              preview={agent.preview}
-              accent={accent}
-              saiyan={saiyan}
-              onClick={() => {}}
-            />
-          </svg>
+          <AgentAvatar
+            name={agent.name}
+            target={agent.target}
+            status={agent.status}
+            preview={agent.preview}
+            accent={accent}
+            saiyan={saiyan}
+            onClick={() => {}}
+          />
         </div>
 
         {/* Mini monitor — desktop only */}

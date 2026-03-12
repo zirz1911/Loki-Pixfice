@@ -55,6 +55,42 @@ export function agentEmoji(name: string): string {
   return NORSE_AGENTS[key]?.emoji ?? '';
 }
 
+// ── Agent category — based on Loki-Oracle README agent table ─────────────────
+// LOCAL  (qwen2.5 first, haiku escalation): thor, huginn, heimdall, loki, tyr
+// CLOUD  (no local model):                  odin, ymir
+// GEMINI (Gemini CLI):                      loki-gemini
+// TERMINAL (plain tool windows):            comfyui, dl-models, server, etc.
+export type AgentCategory = "local" | "cloud" | "gemini" | "terminal";
+
+const GEMINI_NAMES   = new Set(["loki-gemini", "gemini"]);
+const TERMINAL_NAMES = new Set(["comfyui", "dl-models", "server", "jupyter", "ollama"]);
+// Local-first agents (qwen default, haiku escalation)
+const LOCAL_NAMES    = new Set(["thor", "huginn", "heimdall", "loki", "tyr", "muninn"]);
+// Cloud-only agents (no local model available)
+// loki = main Oracle identity (cloud-only, like odin)
+const CLOUD_NAMES    = new Set(["odin", "ymir", "loki"]);
+
+export function agentCategory(name: string): AgentCategory {
+  const k = name.toLowerCase().replace(/-oracle$/, "");
+  if (GEMINI_NAMES.has(name.toLowerCase()) || k.includes("gemini")) return "gemini";
+  if (TERMINAL_NAMES.has(k) || k.includes("comfy") || k.includes("dl-")) return "terminal";
+  if (LOCAL_NAMES.has(k)) return "local";
+  if (CLOUD_NAMES.has(k)) return "cloud";
+  // Unknown Norse agent — assume local (conservative default)
+  return "local";
+}
+
+export const CATEGORY_ROOM: Record<AgentCategory, { label: string; dept: string; accent: string; floor: string; wall: string; dark: string }> = {
+  // JOTUNHEIM — giants, raw local power, free
+  local:    { label: "JOTUNHEIM", dept: "Local (Qwen)", accent: "#4fc3f7", floor: "#003850", wall: "#002438", dark: "#001420" },
+  // ASGARD — gods, premium cloud-only
+  cloud:    { label: "ASGARD",    dept: "Cloud Only",   accent: "#f5c518", floor: "#2a1e00", wall: "#1a1200", dark: "#0e0900" },
+  // VALHALLA — Gemini realm, separate AI
+  gemini:   { label: "VALHALLA",  dept: "Gemini",       accent: "#00e5ff", floor: "#003840", wall: "#002030", dark: "#001020" },
+  // MIDGARD — mortal tools, terminals
+  terminal: { label: "MIDGARD",   dept: "Terminals",    accent: "#69f0ae", floor: "#0d2a18", wall: "#081a10", dark: "#040e08" },
+};
+
 export const PREVIEW_CARD = { width: 540, maxHeight: 760 } as const;
 
 export const DESK = { cols: 4, cellW: 200, cellH: 160, offsetX: 30, offsetY: 60 } as const;
