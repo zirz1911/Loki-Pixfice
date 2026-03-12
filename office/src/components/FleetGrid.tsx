@@ -7,6 +7,7 @@ import type { FeedLogEntry } from "./AgentRow";
 import { roomStyle, PREVIEW_CARD } from "../lib/constants";
 import { BottomStats } from "./BottomStats";
 import { useFps } from "./FpsCounter";
+import { useViewport } from "../hooks/useViewport";
 import { useFleetStore, type RecentEntry } from "../lib/store";
 import type { AgentState, Session, AgentEvent } from "../lib/types";
 import { describeActivity, type FeedEvent } from "../lib/feed";
@@ -84,6 +85,7 @@ export const FleetGrid = memo(function FleetGrid({
   sessions, agents, saiyanTargets, saiyanSources, connected: _c, send, onSelectAgent, eventLog, addEvent, feedActive: _fa, agentFeedLog,
 }: FleetGridProps) {
   const fps = useFps();
+  const { isMobile } = useViewport();
   const observe = useVisibleTargets(send);
 
   const { recentMap, markBusy, pruneRecent, sortMode, setSortMode, grouped, toggleGrouped, collapsed, toggleCollapsed } = useFleetStore();
@@ -218,9 +220,9 @@ export const FleetGrid = memo(function FleetGrid({
     <div style={{ position: "relative", width: "100%", minHeight: "100vh", background: "#0a0a12" }}>
       {/* Summary bar */}
       <div style={{
-        maxWidth: 800, margin: "0 auto",
+        maxWidth: isMobile ? "100%" : 800, margin: "0 auto",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "20px 32px",
+        padding: isMobile ? "12px 14px" : "20px 32px",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, fontFamily: "monospace", fontSize: 14 }}>
@@ -228,10 +230,10 @@ export const FleetGrid = memo(function FleetGrid({
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{sessions.length} rooms</span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{agents.length} agents</span>
-          <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
-          <span style={{ color: fps >= 50 ? "#4caf50" : fps >= 30 ? "#ffa726" : "#ef5350" }}>{fps} fps</span>
+          {!isMobile && <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>}
+          {!isMobile && <span style={{ color: fps >= 50 ? "#4caf50" : fps >= 30 ? "#ffa726" : "#ef5350" }}>{fps} fps</span>}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 20, fontFamily: "monospace", fontSize: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 20, fontFamily: "monospace", fontSize: 14 }}>
           {busyCount > 0 && (
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#fbbf24", boxShadow: "0 0 8px #ffa726", animation: "agent-pulse 1s infinite" }} />
@@ -248,25 +250,29 @@ export const FleetGrid = memo(function FleetGrid({
               <span style={{ color: "rgba(255,255,255,0.3)" }}>{idleCount} idle</span>
             </span>
           )}
-          <span style={{ color: "rgba(255,255,255,0.1)" }}>|</span>
-          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <button
-              style={{
-                padding: "4px 12px", fontSize: 10, fontFamily: "monospace", cursor: "pointer", border: "none",
-                background: sortMode === "active" ? "rgba(251,191,36,0.15)" : "transparent",
-                color: sortMode === "active" ? "#fbbf24" : "#64748B",
-                transition: "background 0.15s, color 0.15s",
-              }}
-              onClick={() => setSortMode("active")}>Active first</button>
-            <button
-              style={{
-                padding: "4px 12px", fontSize: 10, fontFamily: "monospace", cursor: "pointer", border: "none",
-                background: sortMode === "name" ? "rgba(255,255,255,0.08)" : "transparent",
-                color: sortMode === "name" ? "#E2E8F0" : "#64748B",
-                transition: "background 0.15s, color 0.15s",
-              }}
-              onClick={() => setSortMode("name")}>By room</button>
-          </div>
+          {!isMobile && (
+            <>
+              <span style={{ color: "rgba(255,255,255,0.1)" }}>|</span>
+              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <button
+                  style={{
+                    padding: "4px 12px", fontSize: 10, fontFamily: "monospace", cursor: "pointer", border: "none",
+                    background: sortMode === "active" ? "rgba(251,191,36,0.15)" : "transparent",
+                    color: sortMode === "active" ? "#fbbf24" : "#64748B",
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                  onClick={() => setSortMode("active")}>Active first</button>
+                <button
+                  style={{
+                    padding: "4px 12px", fontSize: 10, fontFamily: "monospace", cursor: "pointer", border: "none",
+                    background: sortMode === "name" ? "rgba(255,255,255,0.08)" : "transparent",
+                    color: sortMode === "name" ? "#E2E8F0" : "#64748B",
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                  onClick={() => setSortMode("name")}>By room</button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -282,7 +288,7 @@ export const FleetGrid = memo(function FleetGrid({
       />
 
       {/* Rooms */}
-      <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column", padding: "24px", gap: 16 }}>
+      <div style={{ maxWidth: isMobile ? "100%" : 800, margin: "0 auto", display: "flex", flexDirection: "column", padding: isMobile ? "12px" : "24px", gap: 16 }}>
         {/* Recently Active */}
         <section style={{
           borderRadius: 16, overflow: "hidden",
@@ -292,8 +298,8 @@ export const FleetGrid = memo(function FleetGrid({
         }}>
           <div
             style={{
-              display: "flex", alignItems: "center", gap: 20,
-              padding: "16px 24px", cursor: "pointer", userSelect: "none",
+              display: "flex", alignItems: "center", gap: isMobile ? 12 : 20,
+              padding: isMobile ? "12px 14px" : "16px 24px", cursor: "pointer", userSelect: "none",
               background: "rgba(251,191,36,0.03)",
             }}
             onClick={() => toggleCollapsed("_recent")}
@@ -364,8 +370,8 @@ export const FleetGrid = memo(function FleetGrid({
           >
             <div
               style={{
-                display: "flex", alignItems: "center", gap: 20,
-                padding: "16px 24px", cursor: "pointer", userSelect: "none",
+                display: "flex", alignItems: "center", gap: isMobile ? 12 : 20,
+                padding: isMobile ? "12px 14px" : "16px 24px", cursor: "pointer", userSelect: "none",
                 background: `${vr.accent}08`,
                 transition: "background 0.15s",
               }}

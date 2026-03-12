@@ -152,6 +152,7 @@ export function App() {
           connected={connected}
           send={send}
           onSelectAgent={onSelectAgent}
+          saiyanTargets={saiyanTargets}
         />
         {terminalModal}
         {shortcutOverlay}

@@ -160,8 +160,8 @@ export function useSessions() {
               const topPart = allLines.slice(0, cutoff).join("\n");
               const contentHash = hash(topPart);
 
-              // Track hash changes
-              const entry = hashHistory.current[target] || { prev: 0, curr: 0, unchangedCount: 0 };
+              // Track hash changes (also store lastStatus for side-effect detection)
+              const entry = hashHistory.current[target] || { prev: 0, curr: 0, unchangedCount: 0, lastStatus: "idle" as PaneStatus };
               entry.prev = entry.curr;
               entry.curr = contentHash;
 
@@ -170,20 +170,20 @@ export function useSessions() {
               } else {
                 entry.unchangedCount++;
               }
-              hashHistory.current[target] = entry;
 
               // Check bottom lines for known indicators
               const lines = text.split("\n").filter((l: string) => l.trim());
-              const bottom = lines.slice(-5).join("\n");
-              const hasPrompt = bottom.includes("\u276f"); // ❯
-              const hasBusySign = /[∴✢⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏◐◑◒◓⣾⣽⣻⢿⡿⣟⣯⣷]/.test(bottom) || /● \w+\(/.test(bottom) || /\b(Read|Edit|Write|Bash|Grep|Glob|Agent)\b/.test(bottom);
+              const bottom5 = lines.slice(-5).join("\n");
+              const bottom15 = lines.slice(-15).join("\n"); // wider scan for spinners above status bar
+              const hasPrompt = bottom5.includes("\u276f"); // ❯
+              const hasBusySign = /[∴✢⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏◐◑◒◓⣾⣽⣻⢿⡿⣟⣯⣷]/.test(bottom15) || /● \w+\(/.test(bottom15) || /\b(Read|Edit|Write|Bash|Grep|Glob|Agent)\b/.test(bottom15) || /Spelunking|thinking|Running/.test(bottom15);
+              const bottom = bottom5; // keep for preview
 
-              // Determine status — upstream fix: hasPrompt always means ready
+              // Determine status
               let status: PaneStatus;
               if (hasBusySign) {
                 status = "busy";
               } else if (hasPrompt) {
-                // Prompt visible → ready (regardless of recent changes)
                 status = "ready";
               } else if (entry.prev === 0) {
                 status = "idle";
@@ -196,25 +196,27 @@ export function useSessions() {
               }
 
               const preview = (lines[lines.length - 1] || "").slice(0, 120);
+              const prevStatus = entry.lastStatus;
+              entry.lastStatus = status;
+              hashHistory.current[target] = entry;
+
+              // Side effects OUTSIDE state setter (React requires pure updaters)
+              if (prevStatus !== status) {
+                addEvent(target, "status", `${prevStatus} → ${status}`);
+                if (status === "busy") extendSaiyan(target, "H");
+                else if (prevStatus === "busy") dropSaiyan(target);
+              }
 
               setCaptureData((p) => {
                 const existing = p[target];
                 if (existing && existing.preview === preview && existing.status === status) return p;
-                // Log status change + trigger saiyan when going busy
-                if (existing && existing.status !== status) {
-                  addEvent(target, "status", `${existing.status} → ${status}`);
-                  if (status === "busy") extendSaiyan(target, "H");
-                  else if (status !== "busy" && existing.status === "busy") dropSaiyan(target);
-                } else if (!existing && status === "busy") {
-                  extendSaiyan(target, "H");
-                }
                 return { ...p, [target]: { preview, status } };
               });
             } catch {}
           })
         );
       }
-      pollTimer.current = setTimeout(poll, 5000);
+      pollTimer.current = setTimeout(poll, 2000);
     }
     poll();
     return () => clearTimeout(pollTimer.current);

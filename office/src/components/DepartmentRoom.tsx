@@ -127,24 +127,37 @@ interface DeskSlotProps {
   onSelect: (a: AgentState) => void;
   now: number;
   isMobile?: boolean;
+  isSaiyan?: boolean;
 }
 
-function DeskSlot({ agent, style, onSelect, now, isMobile = false }: DeskSlotProps) {
+function DeskSlot({ agent, style, onSelect, now, isMobile = false, isSaiyan = false }: DeskSlotProps) {
   const busy = agent.status === "busy";
   const ready = agent.status === "ready";
   const dotColor = busy ? "#fdd835" : ready ? "#4caf50" : "#445566";
 
   return (
-    <div className="flex flex-col items-center" style={{ width: isMobile ? "100%" : 104, gap: 4 }}>
+    <div className="flex flex-col items-center" style={{
+      width: isMobile ? "100%" : 104, gap: 4,
+      animation: isSaiyan ? "saiyanPulse 0.6s ease-in-out infinite" : undefined,
+      filter: isSaiyan ? `drop-shadow(0 0 8px ${style.accent}) drop-shadow(0 0 16px #ffd700)` : undefined,
+    }}>
       {/* Desk */}
       <PixelDesk accent={style.accent} busy={busy} now={now} />
 
       {/* Agent sprite */}
       <div
         className="cursor-pointer"
-        style={{ marginTop: -2 }}
+        style={{ marginTop: -2, position: "relative" }}
         onClick={() => onSelect(agent)}
       >
+        {isSaiyan && (
+          <div style={{
+            position: "absolute", inset: -8, borderRadius: "50%",
+            background: `radial-gradient(circle, #ffd70040 0%, ${style.accent}20 50%, transparent 70%)`,
+            animation: "saiyan-aura 1.2s ease-in-out infinite",
+            pointerEvents: "none",
+          }} />
+        )}
         <AgentAvatar
           name={agent.name}
           target={agent.target}
@@ -245,6 +258,7 @@ interface DepartmentRoomProps {
   sessionIdx: number;
   onSelectAgent: (a: AgentState) => void;
   isMobile?: boolean;
+  saiyanTargets?: Set<string>;
 }
 
 export const DepartmentRoom = memo(function DepartmentRoom({
@@ -253,6 +267,7 @@ export const DepartmentRoom = memo(function DepartmentRoom({
   sessionIdx,
   onSelectAgent,
   isMobile = false,
+  saiyanTargets,
 }: DepartmentRoomProps) {
   const style = getRoomStyle(session.name, sessionIdx);
   const now = Date.now();
@@ -379,7 +394,7 @@ export const DepartmentRoom = memo(function DepartmentRoom({
               >
                 {slots.map((ag, i) =>
                   ag ? (
-                    <DeskSlot key={ag.target} agent={ag} style={style} onSelect={onSelectAgent} now={now} isMobile={isMobile} />
+                    <DeskSlot key={ag.target} agent={ag} style={style} onSelect={onSelectAgent} now={now} isMobile={isMobile} isSaiyan={saiyanTargets?.has(ag.target)} />
                   ) : (
                     <EmptyDesk key={`empty-${i}`} style={style} isMobile={isMobile} />
                   )

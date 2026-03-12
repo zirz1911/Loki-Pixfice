@@ -211,10 +211,11 @@ interface PixelOfficeViewProps {
   connected: boolean;
   send: (msg: object) => void;
   onSelectAgent: (a: AgentState) => void;
+  saiyanTargets?: Set<string>;
 }
 
 export const PixelOfficeView = memo(function PixelOfficeView({
-  sessions, agents, msgs, connected, send, onSelectAgent,
+  sessions, agents, msgs, connected, send, onSelectAgent, saiyanTargets,
 }: PixelOfficeViewProps) {
   const { isMobile, isTablet } = useViewport();
   const [chatOpen, setChatOpen] = useState(false);
@@ -308,6 +309,7 @@ export const PixelOfficeView = memo(function PixelOfficeView({
                   sessionIdx={i}
                   onSelectAgent={onSelectAgent}
                   isMobile={isMobile}
+                  saiyanTargets={saiyanTargets}
                 />
               ))}
             </div>

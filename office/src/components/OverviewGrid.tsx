@@ -2,6 +2,7 @@ import { memo, useState, useEffect, useRef, useMemo } from "react";
 import { ansiToHtml, processCapture } from "../lib/ansi";
 import { roomStyle } from "../lib/constants";
 import { useFps } from "./FpsCounter";
+import { useViewport } from "../hooks/useViewport";
 import type { AgentState, Session } from "../lib/types";
 
 function sessionNum(name: string): number {
@@ -164,6 +165,7 @@ export const OverviewGrid = memo(function OverviewGrid({
   onSelectAgent,
 }: OverviewGridProps) {
   const fps = useFps();
+  const { isMobile, isTablet } = useViewport();
   const busyCount = agents.filter(a => a.status === "busy").length;
   const readyCount = agents.filter(a => a.status === "ready").length;
   const idleCount = agents.length - busyCount - readyCount;
@@ -184,7 +186,7 @@ export const OverviewGrid = memo(function OverviewGrid({
       <div style={{
         maxWidth: 1600, margin: "0 auto",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "16px 24px",
+        padding: isMobile ? "12px 14px" : "16px 24px",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, fontFamily: "monospace", fontSize: 12 }}>
@@ -194,8 +196,8 @@ export const OverviewGrid = memo(function OverviewGrid({
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{sessions.length} rooms</span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{agents.length} agents</span>
-          <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
-          <span style={{ color: fps >= 50 ? "#4caf50" : fps >= 30 ? "#ffa726" : "#ef5350" }}>{fps} fps</span>
+          {!isMobile && <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>}
+          {!isMobile && <span style={{ color: fps >= 50 ? "#4caf50" : fps >= 30 ? "#ffa726" : "#ef5350" }}>{fps} fps</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 20, fontFamily: "monospace", fontSize: 12 }}>
           {busyCount > 0 && (
@@ -208,18 +210,18 @@ export const OverviewGrid = memo(function OverviewGrid({
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4caf50", boxShadow: "0 0 4px #4caf50" }} />
             <span style={{ color: "#4caf50" }}>{readyCount} ready</span>
           </span>
-          {idleCount > 0 && (
+          {!isMobile && idleCount > 0 && (
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.2)" }} />
               <span style={{ color: "rgba(255,255,255,0.3)" }}>{idleCount} idle</span>
             </span>
           )}
-          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.15)", fontFamily: "'Press Start 2P', monospace" }}>J → JUMP</span>
+          {!isMobile && <span style={{ fontSize: 8, color: "rgba(255,255,255,0.15)", fontFamily: "'Press Start 2P', monospace" }}>J → JUMP</span>}
         </div>
       </div>
 
       {/* Session groups */}
-      <div style={{ maxWidth: 1600, margin: "0 auto", padding: "24px", display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ maxWidth: 1600, margin: "0 auto", padding: isMobile ? "12px" : "24px", display: "flex", flexDirection: "column", gap: 24 }}>
         {sessionGroups.map(([sessionName, sessionAgents]) => {
           const style = roomStyle(sessionName);
           const hasBusy = sessionAgents.some(a => a.status === "busy");
@@ -260,7 +262,7 @@ export const OverviewGrid = memo(function OverviewGrid({
               {/* Agent tiles grid */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+                gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(auto-fill, minmax(280px, 1fr))" : "repeat(auto-fill, minmax(340px, 1fr))",
                 gap: 12,
               }}>
                 {sessionAgents.map((agent, i) => (

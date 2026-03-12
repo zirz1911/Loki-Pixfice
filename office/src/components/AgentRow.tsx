@@ -1,6 +1,7 @@
 import { memo, useCallback, useRef, useState } from "react";
 import { AgentAvatar } from "./AgentAvatar";
 import { MiniMonitor } from "./MiniMonitor";
+import { useViewport } from "../hooks/useViewport";
 import type { AgentState } from "../lib/types";
 
 export type FeedLogEntry = { text: string; ts: number };
@@ -31,6 +32,7 @@ export const AgentRow = memo(function AgentRow({
 }: AgentRowProps) {
   const isBusy = agent.status === "busy";
   const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ");
+  const { isMobile } = useViewport();
   const [inputOpen, setInputOpen] = useState(false);
   const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
@@ -58,13 +60,13 @@ export const AgentRow = memo(function AgentRow({
 
   const statusColor = isBusy ? "#ffa726" : agent.status === "ready" ? "#22C55E" : "#94A3B8";
   const statusBg = isBusy ? "#ffa72620" : agent.status === "ready" ? "#22C55E18" : "rgba(255,255,255,0.06)";
-  const avatarSize = featured ? 96 : 56;
+  const avatarSize = featured ? (isMobile ? 64 : 96) : (isMobile ? 40 : 56);
 
   return (
     <div ref={(el) => observe(el, agent.target)}>
       <div
         style={{
-          display: "flex", alignItems: "center", gap: 20,
+          display: "flex", alignItems: "center", gap: isMobile ? 10 : 20,
           padding: "14px 24px",
           cursor: "pointer",
           transition: "background 0.15s",
@@ -186,7 +188,7 @@ export const AgentRow = memo(function AgentRow({
         {send && (
           <button
             style={{
-              width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+              width: isMobile ? 44 : 40, height: isMobile ? 44 : 40, borderRadius: "50%", flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", border: "none",
               background: inputOpen ? accent : `${accent}20`,

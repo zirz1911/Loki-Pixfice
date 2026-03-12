@@ -1,6 +1,7 @@
 import { memo, useMemo } from "react";
 import { AgentAvatar } from "./AgentAvatar";
 import { roomStyle } from "../lib/constants";
+import { useViewport } from "../hooks/useViewport";
 import type { RecentEntry } from "../lib/store";
 import type { AgentState } from "../lib/types";
 
@@ -15,20 +16,25 @@ interface StageSectionProps {
 }
 
 const SHRINK_MS = 60_000;
-const SIZE_BIG = 112;
-const SIZE_SMALL = 56;
+const SIZE_BIG_DESKTOP = 112;
+const SIZE_SMALL_DESKTOP = 56;
+const SIZE_BIG_MOBILE = 80;
+const SIZE_SMALL_MOBILE = 40;
 
-function ghostSize(lastBusy: number): number {
+function ghostSize(lastBusy: number, sizeBig: number, sizeSmall: number): number {
   const elapsed = Date.now() - lastBusy;
-  if (elapsed <= 0) return SIZE_BIG;
-  if (elapsed >= SHRINK_MS) return SIZE_SMALL;
+  if (elapsed <= 0) return sizeBig;
+  if (elapsed >= SHRINK_MS) return sizeSmall;
   const t = elapsed / SHRINK_MS;
-  return Math.round(SIZE_BIG - (SIZE_BIG - SIZE_SMALL) * t);
+  return Math.round(sizeBig - (sizeBig - sizeSmall) * t);
 }
 
 export const StageSection = memo(function StageSection({
   busyAgents, recentlyActive, saiyanTargets, recentMap, showPreview, hidePreview, onAgentClick,
 }: StageSectionProps) {
+  const { isMobile } = useViewport();
+  const SIZE_BIG = isMobile ? SIZE_BIG_MOBILE : SIZE_BIG_DESKTOP;
+  const SIZE_SMALL = isMobile ? SIZE_SMALL_MOBILE : SIZE_SMALL_DESKTOP;
   const activeAgents = useMemo(() => {
     const seenNames = new Set<string>();
     const result: AgentState[] = [];
@@ -64,7 +70,7 @@ export const StageSection = memo(function StageSection({
   const hasBusy = activeAgents.length > 0;
 
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 24px 8px" }}>
+    <div style={{ maxWidth: isMobile ? "100%" : 800, margin: "0 auto", padding: isMobile ? "12px 12px 8px" : "24px 24px 8px" }}>
       <div style={{
         position: "relative", borderRadius: 16, overflow: "hidden",
         background: hasBusy
@@ -127,7 +133,7 @@ export const StageSection = memo(function StageSection({
         </div>
 
         {/* Stage floor */}
-        <div style={{ position: "relative", display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "center", padding: "8px 24px 20px" }}>
+        <div style={{ position: "relative", display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "center", padding: isMobile ? "8px 12px 16px" : "8px 24px 20px" }}>
           {/* Floor line */}
           <div style={{
             position: "absolute", bottom: 0, left: 24, right: 24, height: 1,
@@ -146,7 +152,7 @@ export const StageSection = memo(function StageSection({
                 key={`stage-${agent.target}`}
                 style={{
                   position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-                  padding: "12px 16px", borderRadius: 12, cursor: "pointer", minWidth: 120,
+                  padding: "12px 16px", borderRadius: 12, cursor: "pointer", minWidth: isMobile ? 80 : 120,
                   transition: "transform 0.2s",
                 }}
                 onMouseEnter={(e) => {
@@ -161,10 +167,10 @@ export const StageSection = memo(function StageSection({
               >
                 <div style={{
                   position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)",
-                  width: 96, height: 112, pointerEvents: "none",
+                  width: SIZE_BIG - 16, height: SIZE_BIG, pointerEvents: "none",
                   background: `radial-gradient(ellipse at 50% 0%, ${rs.accent}15 0%, transparent 70%)`,
                 }} />
-                <svg viewBox="-40 -50 80 80" width={112} height={112} overflow="visible">
+                <svg viewBox="-40 -50 80 80" width={SIZE_BIG} height={SIZE_BIG} overflow="visible">
                   <AgentAvatar
                     name={agent.name} target={agent.target} status={agent.status}
                     preview={agent.preview} accent={rs.accent} saiyan={isSaiyan} onClick={() => {}}
@@ -192,7 +198,7 @@ export const StageSection = memo(function StageSection({
             const rs = roomStyle(agent.session);
             const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ");
             const lastBusy = recentMap[agent.target]?.lastBusy || 0;
-            const size = ghostSize(lastBusy);
+            const size = ghostSize(lastBusy, SIZE_BIG, SIZE_SMALL);
             const t = Math.min(1, (Date.now() - lastBusy) / SHRINK_MS);
             const opacity = 0.6 - t * 0.3;
             const grayscale = 0.3 + t * 0.4;
