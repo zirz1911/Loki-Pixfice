@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: "/office/#fleet",     label: "FLEET",     id: "fleet"     },
   { href: "/office/#mission",   label: "MISSION",   id: "mission"   },
   { href: "/office/#overview",  label: "OVERVIEW",  id: "overview"  },
+  { href: "/office/#worktree",  label: "WORKTREE",  id: "worktree"  },
   { href: "/office/#game",      label: "GAME",      id: "game"      },
   { href: "/",                  label: "TERMINAL",  id: "terminal"  },
 ];
@@ -25,11 +26,12 @@ const VIEW_TITLE: Record<string, string> = {
   fleet:    "FLEET",
   mission:  "MISSION CTL",
   overview: "OVERVIEW",
+  worktree: "WORKTREES",
   game:     "GAME VIEW",
 };
 
 const NAV_ICONS: Record<string, string> = {
-  office: "🏢", fleet: "🚀", mission: "🌌", overview: "📊", game: "🎮", terminal: "💻",
+  office: "🏢", fleet: "🚀", mission: "🌌", overview: "📊", worktree: "🌿", game: "🎮", terminal: "💻",
 };
 
 export const StatusBar = memo(function StatusBar({

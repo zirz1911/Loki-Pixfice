@@ -14,6 +14,7 @@ import { SaiyanToasts } from "./components/SaiyanToasts";
 import { JumpOverlay } from "./components/JumpOverlay";
 import { OverviewGrid } from "./components/OverviewGrid";
 import { FleetGrid } from "./components/FleetGrid";
+import { WorktreeView } from "./components/WorktreeView";
 import { unlockAudio, isAudioUnlocked, setSoundMuted } from "./lib/sounds";
 import { roomStyle } from "./lib/constants";
 import type { AgentState } from "./lib/types";
@@ -277,6 +278,25 @@ export function App() {
             feedActive={feedActive}
             agentFeedLog={agentFeedLog}
           />
+        </div>
+        {terminalModal}
+        {jumpOverlay}
+        {shortcutOverlay}
+      </div>
+    );
+  }
+
+  // ── Route: #worktree — git worktree hygiene view ──────────────────────────
+  if (route === "worktree") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", background: "#0a0a12", overflow: "hidden" }}>
+        <StatusBar
+          connected={connected} agentCount={agents.length} sessionCount={sessions.length}
+          activeView="worktree" onJump={() => setShowJump(true)}
+          muted={muted} onToggleMute={toggleMute}
+        />
+        <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
+          <WorktreeView accentColor="#5a8cff" maxHeight="none" />
         </div>
         {terminalModal}
         {jumpOverlay}
