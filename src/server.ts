@@ -4,6 +4,8 @@ import { serveStatic } from "hono/bun";
 import { listSessions, capture, sendKeys, selectWindow } from "./ssh";
 import type { ServerWebSocket } from "bun";
 import { parseLine } from "../office/src/lib/feed";
+import { handlePtyMessage, handlePtyClose } from "./pty";
+import { loadConfig } from "./config";
 import * as fs from "fs";
 
 const FEED_LOG = process.env.FEED_LOG || "/tmp/loki-feed.log";
@@ -153,6 +155,57 @@ app.post("/api/select", async (c) => {
   if (!target) return c.json({ error: "target required" }, 400);
   await selectWindow(target);
   return c.json({ ok: true, target });
+});
+
+// ── Worktrees API ─────────────────────────────────────────────────────────────
+
+interface Worktree {
+  path: string;
+  branch: string;
+  head: string;
+  bare: boolean;
+  prunable: boolean;
+}
+
+async function parseWorktrees(): Promise<Worktree[]> {
+  try {
+    const proc = Bun.spawn(["git", "worktree", "list", "--porcelain"], {
+      stdout: "pipe",
+      stderr: "pipe",
+      cwd: process.cwd(),
+    });
+    const text = await new Response(proc.stdout).text();
+    await proc.exited;
+
+    const worktrees: Worktree[] = [];
+    let current: Partial<Worktree> = {};
+
+    for (const line of text.split("\n")) {
+      if (line.startsWith("worktree ")) {
+        if (current.path !== undefined) worktrees.push(current as Worktree);
+        current = { path: line.slice("worktree ".length).trim(), branch: "", head: "", bare: false, prunable: false };
+      } else if (line.startsWith("HEAD ")) {
+        current.head = line.slice("HEAD ".length).trim().slice(0, 8);
+      } else if (line.startsWith("branch ")) {
+        current.branch = line.slice("branch ".length).trim().replace("refs/heads/", "");
+      } else if (line === "bare") {
+        current.bare = true;
+      } else if (line.startsWith("prunable ")) {
+        current.prunable = true;
+      } else if (line === "") {
+        if (current.path !== undefined) { worktrees.push(current as Worktree); current = {}; }
+      }
+    }
+    if (current.path !== undefined) worktrees.push(current as Worktree);
+    return worktrees;
+  } catch {
+    return [];
+  }
+}
+
+app.get("/api/worktrees", async (c) => {
+  const worktrees = await parseWorktrees();
+  return c.json({ worktrees });
 });
 
 app.post("/api/upload", async (c) => {
@@ -307,13 +360,21 @@ function stopIntervals() {
   if (sessionInterval) { clearInterval(sessionInterval); sessionInterval = null; }
 }
 
-export function startServer(port = +(process.env.MAW_PORT || 3456)) {
+// ── PTY WebSocket data tag ────────────────────────────────────────────────────
+type PtyWSData = { isPty: true };
+
+export function startServer(port = +(process.env.MAW_PORT || loadConfig().port)) {
 
   const server = Bun.serve({
     port,
     fetch(req, server) {
       const url = new URL(req.url);
-      // Upgrade WebSocket
+      // PTY WebSocket — dedicated endpoint for xterm.js
+      if (url.pathname === "/ws/pty") {
+        if (server.upgrade(req, { data: { isPty: true } })) return;
+        return new Response("WebSocket upgrade failed", { status: 400 });
+      }
+      // Regular capture/sessions WebSocket
       if (url.pathname === "/ws") {
         if (server.upgrade(req, { data: { target: null } })) return;
         return new Response("WebSocket upgrade failed", { status: 400 });
@@ -321,42 +382,56 @@ export function startServer(port = +(process.env.MAW_PORT || 3456)) {
       return app.fetch(req);
     },
     websocket: {
-      open(ws: ServerWebSocket<WSData>) {
-        clients.add(ws);
+      open(ws: ServerWebSocket<WSData | PtyWSData>) {
+        // PTY connections are handled separately
+        if ((ws.data as PtyWSData).isPty) return;
+        const captureWs = ws as ServerWebSocket<WSData>;
+        clients.add(captureWs);
         startIntervals();
         // Send sessions immediately
-        listSessions().then(s => ws.send(JSON.stringify({ type: "sessions", sessions: s }))).catch(() => {});
+        listSessions().then(s => captureWs.send(JSON.stringify({ type: "sessions", sessions: s }))).catch(() => {});
         // Send feed history on connect
         try {
           const lines = readFeedLines(50);
           const events = lines.map(l => parseLine(l)).filter(Boolean);
           if (events.length > 0) {
-            ws.send(JSON.stringify({ type: "feed-history", events }));
+            captureWs.send(JSON.stringify({ type: "feed-history", events }));
           }
         } catch {}
       },
-      message(ws: ServerWebSocket<WSData>, msg) {
+      message(ws: ServerWebSocket<WSData | PtyWSData>, msg) {
+        // Route PTY messages
+        if ((ws.data as PtyWSData).isPty) {
+          handlePtyMessage(ws as ServerWebSocket<PtyWSData>, msg as string).catch(() => {});
+          return;
+        }
+        const captureWs = ws as ServerWebSocket<WSData>;
         try {
           const data = JSON.parse(msg as string);
           if (data.type === "subscribe") {
-            ws.data.target = data.target;
-            pushCapture(ws); // immediate first push
+            captureWs.data.target = data.target;
+            pushCapture(captureWs); // immediate first push
           } else if (data.type === "select") {
             selectWindow(data.target).catch(() => {});
           } else if (data.type === "send") {
             sendKeys(data.target, data.text)
               .then(() => {
-                ws.send(JSON.stringify({ type: "sent", ok: true, target: data.target, text: data.text }));
+                captureWs.send(JSON.stringify({ type: "sent", ok: true, target: data.target, text: data.text }));
                 // Push capture after short delay to show result
-                setTimeout(() => pushCapture(ws), 300);
+                setTimeout(() => pushCapture(captureWs), 300);
               })
-              .catch(e => ws.send(JSON.stringify({ type: "error", error: e.message })));
+              .catch(e => captureWs.send(JSON.stringify({ type: "error", error: e.message })));
           }
         } catch {}
       },
-      close(ws: ServerWebSocket<WSData>) {
-        clients.delete(ws);
-        lastContent.delete(ws);
+      close(ws: ServerWebSocket<WSData | PtyWSData>) {
+        if ((ws.data as PtyWSData).isPty) {
+          handlePtyClose(ws as ServerWebSocket<PtyWSData>).catch(() => {});
+          return;
+        }
+        const captureWs = ws as ServerWebSocket<WSData>;
+        clients.delete(captureWs);
+        lastContent.delete(captureWs);
         stopIntervals();
       },
     },

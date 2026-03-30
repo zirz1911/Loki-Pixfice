@@ -1,18 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { ansiToHtml } from "../lib/ansi";
-import { PixelKey, NAV_KEYS, CTRL_KEYS } from "./PixelKey";
+import { useRef, useCallback } from "react";
+import { PixelKey } from "./PixelKey";
+import { XTerminal, type XTerminalHandle } from "./XTerminal";
 import type { AgentState } from "../lib/types";
 import { useViewport } from "../hooks/useViewport";
-
-function trimCapture(raw: string): string {
-  const lines = raw.split("\n");
-  while (lines.length > 0) {
-    const stripped = lines[lines.length - 1].replace(/\x1b\[[0-9;]*m/g, "").trim();
-    if (stripped === "") lines.pop();
-    else break;
-  }
-  return lines.join("\n");
-}
 
 interface TerminalModalProps {
   agent: AgentState;
@@ -33,55 +23,16 @@ const STATUS_COLOR: Record<string, string> = {
   idle: "#445566",
 };
 
-export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSibling, siblings }: TerminalModalProps) {
+export function TerminalModal({ agent, send: _send, onClose, onNavigate, onSelectSibling, siblings }: TerminalModalProps) {
   const { isMobile } = useViewport();
-  const [content, setContent] = useState("");
-  const [inputBuf, setInputBuf] = useState("");
-  const termRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const xtermRef = useRef<XTerminalHandle>(null);
 
-  useEffect(() => {
-    const t = setTimeout(() => inputRef.current?.focus(), 120);
-    return () => clearTimeout(t);
-  }, [agent.target]);
-
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const refocus = () => { setTimeout(() => inputRef.current?.focus(), 0); };
-    el.addEventListener("mousedown", refocus);
-    return () => el.removeEventListener("mousedown", refocus);
+  const sendKey = useCallback((seq: string) => {
+    xtermRef.current?.sendInput(seq);
   }, []);
 
-  useEffect(() => {
-    send({ type: "subscribe", target: agent.target });
-    const poll = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/capture?target=${encodeURIComponent(agent.target)}`);
-        const data = await res.json();
-        setContent(data.content || "");
-      } catch {}
-    }, 200);
-    return () => { clearInterval(poll); send({ type: "subscribe", target: "" }); };
-  }, [agent.target, send]);
-
-  const isFirstContent = useRef(true);
-  useEffect(() => {
-    const el = termRef.current;
-    if (el) {
-      if (isFirstContent.current && content) {
-        isFirstContent.current = false;
-        el.scrollTop = el.scrollHeight;
-      } else {
-        const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-        if (atBottom) el.scrollTop = el.scrollHeight;
-      }
-    }
-  }, [content]);
-
-  useEffect(() => { isFirstContent.current = true; }, [agent.target]);
-
+  // XTerminal handles its own keyboard/paste — we only need outer modal nav shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
     if (e.altKey && e.key === "ArrowLeft") { e.preventDefault(); onNavigate(-1); return; }
@@ -91,51 +42,7 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
       if (idx < siblings.length) { e.preventDefault(); onSelectSibling(siblings[idx]); }
       return;
     }
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (inputBuf) { send({ type: "send", target: agent.target, text: inputBuf }); setInputBuf(""); }
-    } else if (e.key === "c" && e.ctrlKey) {
-      e.preventDefault(); setInputBuf("");
-    }
-  }, [inputBuf, agent.target, send, onClose, onNavigate, siblings, onSelectSibling]);
-
-  const handlePaste = useCallback((e: React.ClipboardEvent | ClipboardEvent) => {
-    e.preventDefault();
-    const text = (e as ClipboardEvent).clipboardData?.getData("text") ?? "";
-    if (!text) return;
-    const lines = text.split(/\r?\n/);
-    if (lines.length === 1) {
-      // single line — add to buffer
-      setInputBuf((b) => b + text);
-    } else {
-      // multiline — send all but last line immediately, keep remainder in buffer
-      setInputBuf((buf) => {
-        const firstLine = buf + lines[0];
-        // send complete lines
-        for (let i = 0; i < lines.length - 1; i++) {
-          const toSend = i === 0 ? firstLine : lines[i];
-          send({ type: "send", target: agent.target, text: toSend + "\r" });
-        }
-        return lines[lines.length - 1]; // leftover stays in buffer
-      });
-    }
-  }, [agent.target, send]);
-
-  // Capture paste anywhere in the modal, not just the input
-  useEffect(() => {
-    const onGlobalPaste = (e: ClipboardEvent) => {
-      if (!wrapperRef.current?.contains(document.activeElement) &&
-          document.activeElement !== inputRef.current) return;
-      handlePaste(e);
-    };
-    document.addEventListener("paste", onGlobalPaste);
-    return () => document.removeEventListener("paste", onGlobalPaste);
-  }, [handlePaste]);
-
-  const sendKey = useCallback((seq: string) => {
-    send({ type: "send", target: agent.target, text: seq });
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, [agent.target, send]);
+  }, [onClose, onNavigate, siblings, onSelectSibling]);
 
   const dotColor = STATUS_COLOR[agent.status] ?? "#445566";
 
@@ -149,6 +56,7 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
         imageRendering: "pixelated",
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={handleKeyDown}
       ref={wrapperRef}
     >
       <div style={isMobile ? {
@@ -236,7 +144,7 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
                 fontSize: 18, color: "#445566", lineHeight: 1, padding: "0 2px",
               }}
             >
-              ×
+              x
             </button>
           </div>
         </div>
@@ -258,63 +166,16 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
           </span>
         </div>
 
-        {/* ── Terminal output */}
-        <div
-          ref={termRef}
-          style={{
-            flex: 1,
-            padding: "12px 16px",
-            overflowY: "auto",
-            fontFamily: "'SF Mono', 'Fira Code', monospace",
-            fontSize: 13,
-            lineHeight: 1.4,
-            color: "#cdd6f4",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-all",
-            background: "#07080f",
-          }}
-          dangerouslySetInnerHTML={{ __html: ansiToHtml(trimCapture(content)) }}
-        />
-
-        {/* ── Input line */}
-        <div
-          style={{
-            display: "flex", alignItems: "center", gap: 10,
-            padding: "8px 14px",
-            background: "#0a0b16",
-            borderTop: `2px solid ${dotColor}40`,
-            cursor: "text",
-            flexShrink: 0,
-          }}
-          onClick={() => inputRef.current?.focus()}
-        >
-          <span style={{ fontSize: 11, color: "#22d3ee", fontFamily: "monospace", flexShrink: 0 }}>❯</span>
-          <div style={{ flex: 1, position: "relative", minHeight: 20 }}>
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputBuf}
-              onChange={(e) => setInputBuf(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              style={{
-                position: "absolute", inset: 0, width: "100%",
-                background: "transparent",
-                color: "#e0e8ff",
-                outline: "none",
-                caretColor: "#22d3ee",
-                fontFamily: "'SF Mono', monospace",
-                fontSize: 13,
-                border: "none",
-              }}
-              spellCheck={false}
-              autoComplete="off"
-              autoFocus
-            />
-          </div>
+        {/* ── XTerminal (real PTY via /ws/pty) */}
+        <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+          <XTerminal
+            ref={xtermRef}
+            target={agent.target}
+            style={{ position: "absolute", inset: 0 }}
+          />
         </div>
 
-        {/* ── Key buttons */}
+        {/* ── Key buttons row (mobile shortcuts + quick actions) */}
         <div style={{
           display: "flex", alignItems: "center", gap: 8,
           padding: "6px 14px",
@@ -324,34 +185,25 @@ export function TerminalModal({ agent, send, onClose, onNavigate, onSelectSiblin
           flexWrap: "wrap",
           overflowX: "auto",
         }}>
-          {/* Group 1: Navigation */}
           {[
             { label: "ESC", seq: "\x1b" },
-            { label: "TAB ⇥", seq: "\t" },
-            { label: "↑", seq: "\x1b[A" },
-            { label: "↓", seq: "\x1b[B" },
-            { label: "←", seq: "\x1b[D" },
-            { label: "→", seq: "\x1b[C" },
-            { label: "HOME", seq: "\x1b[H" },
-            { label: "END", seq: "\x1b[F" },
-            { label: "PGUP", seq: "\x1b[5~" },
-            { label: "PGDN", seq: "\x1b[6~" },
+            { label: "TAB", seq: "\t" },
+            { label: "UP", seq: "\x1b[A" },
+            { label: "DN", seq: "\x1b[B" },
+            { label: "LT", seq: "\x1b[D" },
+            { label: "RT", seq: "\x1b[C" },
           ].map(({ label, seq }) => (
             <PixelKey key={label} label={label} seq={seq} dotColor={dotColor} sendKey={sendKey} />
           ))}
-
-          {/* Divider */}
           <div style={{ width: 1, height: 18, background: "#1a2030", flexShrink: 0 }} />
-
-          {/* Group 2: Control */}
           {[
-            { label: "^C", seq: "\x03", title: "Ctrl+C — interrupt" },
-            { label: "^D", seq: "\x04", title: "Ctrl+D — EOF/exit" },
-            { label: "^Z", seq: "\x1a", title: "Ctrl+Z — suspend" },
-            { label: "ENTER ↵", seq: "\r" },
+            { label: "^C", seq: "\x03", title: "Ctrl+C" },
+            { label: "^D", seq: "\x04", title: "Ctrl+D" },
           ].map(({ label, seq, title }) => (
             <PixelKey key={label} label={label} seq={seq} dotColor={dotColor} sendKey={sendKey} title={title} accent />
           ))}
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 7, color: "#2a3a50" }}>ESC closes  ALT+arrows nav</span>
         </div>
       </div>
     </div>
