@@ -1,5 +1,4 @@
 import { memo, useCallback, useRef, useState } from "react";
-import { AgentAvatar } from "./AgentAvatar";
 import { MiniMonitor } from "./MiniMonitor";
 import { useViewport } from "../hooks/useViewport";
 import type { AgentState } from "../lib/types";
@@ -12,8 +11,6 @@ interface AgentRowProps {
   agent: AgentState;
   accent: string;
   roomLabel: string;
-  saiyan: boolean;
-  saiyanSource?: string;
   isLast: boolean;
   agoLabel?: string;
   featured?: boolean;
@@ -27,7 +24,7 @@ interface AgentRowProps {
 }
 
 export const AgentRow = memo(function AgentRow({
-  agent, accent, roomLabel, saiyan, saiyanSource, isLast, agoLabel, featured, feedLog,
+  agent, accent, roomLabel, isLast, agoLabel, featured, feedLog,
   observe, showPreview, hidePreview, onAgentClick, send, onSendDone,
 }: AgentRowProps) {
   const isBusy = agent.status === "busy";
@@ -84,24 +81,18 @@ export const AgentRow = memo(function AgentRow({
         {/* Avatar */}
         <div
           style={{
-            flexShrink: 0, overflow: "visible",
+            flexShrink: 0,
             width: avatarSize, height: avatarSize,
-            transition: "width 0.3s, height 0.3s",
-            animation: saiyan ? "saiyanPulse 1.5s ease-in-out infinite" : "none",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
           onMouseEnter={isTouch ? undefined : (e) => showPreview(agent, accent, roomLabel, e)}
           onMouseLeave={isTouch ? undefined : () => hidePreview()}
         >
-          <AgentAvatar
-            name={agent.name}
-            target={agent.target}
-            status={agent.status}
-            preview={agent.preview}
-            accent={accent}
-            saiyan={saiyan}
-            onClick={() => {}}
-          />
+          <div style={{
+            width: 20, height: 20,
+            background: isBusy ? "#fdd835" : agent.status === "ready" ? "#4caf50" : "#445566",
+            boxShadow: isBusy ? "0 0 8px #fdd835" : "none",
+          }} />
         </div>
 
         {/* Mini monitor — desktop only */}
@@ -136,25 +127,6 @@ export const AgentRow = memo(function AgentRow({
             {agoLabel && (
               <span style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,0.25)", flexShrink: 0 }}>
                 {agoLabel}
-              </span>
-            )}
-            {saiyan && (
-              <span style={{
-                fontSize: 10, fontFamily: "monospace",
-                padding: "4px 10px", borderRadius: 6, flexShrink: 0,
-                background: "rgba(251,191,36,0.2)", color: "#fbbf24",
-              }}>
-                SAIYAN
-              </span>
-            )}
-            {saiyan && saiyanSource && (
-              <span style={{
-                fontSize: 9, fontFamily: "monospace",
-                padding: "2px 6px", borderRadius: 4, flexShrink: 0,
-                background: saiyanSource === "HF" ? "rgba(139,92,246,0.2)" : saiyanSource === "F" ? "rgba(34,211,238,0.15)" : "rgba(251,191,36,0.12)",
-                color: saiyanSource === "HF" ? "#a78bfa" : saiyanSource === "F" ? "#22d3ee" : "#fbbf24",
-              }}>
-                {saiyanSource === "HF" ? "H+F" : saiyanSource === "F" ? "FEED" : "HASH"}
               </span>
             )}
           </div>

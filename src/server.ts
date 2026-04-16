@@ -234,7 +234,7 @@ app.post("/api/upload", async (c) => {
 
 // Serve UI
 const html = Bun.file(import.meta.dir + "/ui.html");
-app.get("/", (c) => c.body(html.stream(), { headers: { "Content-Type": "text/html" } }));
+app.get("/", (c) => c.body(html.stream(), { headers: { "Content-Type": "text/html", "Cache-Control": "no-cache, no-store, must-revalidate" } }));
 
 const dashboardHtml = Bun.file(import.meta.dir + "/dashboard.html");
 app.get("/dashboard", (c) => c.body(dashboardHtml.stream(), { headers: { "Content-Type": "text/html" } }));

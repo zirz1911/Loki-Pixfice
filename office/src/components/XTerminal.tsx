@@ -116,7 +116,10 @@ function XTerminal({ target, onAttached, onExit, style }, ref) {
           } else if (msg.type === "pty-error") {
             term.write(`\r\n\x1b[31m[pty error: ${msg.error}]\x1b[0m\r\n`);
           }
-        } catch { /* not JSON — treat as terminal data */ }
+        } catch {
+          // Not JSON — raw terminal string data from node-pty
+          term.write(e.data as string);
+        }
       }
     };
 

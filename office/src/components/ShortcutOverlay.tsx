@@ -9,7 +9,6 @@ const SHORTCUTS = [
     ["?", "Show shortcuts"],
     ["Scroll", "Zoom in/out"],
     ["Shift+Drag", "Pan view"],
-    ["Joystick", "Drag to pan"],
   ]],
   ["Pinned Card", [
     ["Click agent", "Pin card + input"],

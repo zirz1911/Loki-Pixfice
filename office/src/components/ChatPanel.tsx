@@ -216,10 +216,32 @@ export const ChatPanel = memo(function ChatPanel({
   isMobile = false,
 }: ChatPanelProps) {
   const { messages, sendMessage, selectedTarget, setSelectedTarget } = useChat(agents, send);
-  const [inputText, setInputText] = useState("");
   const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputBarRef = useRef<HTMLDivElement>(null);
+
+  function autoResize(el: HTMLTextAreaElement) {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }
+
+  // Mobile keyboard avoidance — scroll input bar above keyboard when viewport shrinks
+  useEffect(() => {
+    if (!isMobile) return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    function onViewportChange() {
+      inputBarRef.current?.scrollIntoView({ block: "end" });
+    }
+    viewport.addEventListener("resize", onViewportChange);
+    viewport.addEventListener("scroll", onViewportChange);
+    return () => {
+      viewport.removeEventListener("resize", onViewportChange);
+      viewport.removeEventListener("scroll", onViewportChange);
+    };
+  }, [isMobile]);
 
   async function uploadImage(blob: Blob) {
     setUploading(true);
@@ -229,14 +251,16 @@ export const ChatPanel = memo(function ChatPanel({
       formData.append("file", blob, `image.${ext}`);
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
-      if (data.path) {
-        setInputText((prev) => (prev ? `${prev} ${data.path}` : data.path));
+      if (data.path && textareaRef.current) {
+        const prev = textareaRef.current.value;
+        textareaRef.current.value = prev ? `${prev} ${data.path}` : data.path;
+        autoResize(textareaRef.current);
       }
     } catch {}
     setUploading(false);
   }
 
-  function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
+  function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>) {
     const imageItem = Array.from(e.clipboardData.items).find((i) =>
       i.type.startsWith("image/")
     );
@@ -259,14 +283,18 @@ export const ChatPanel = memo(function ChatPanel({
   }, [messages]);
 
   function handleSend() {
-    const text = inputText.trim();
+    const text = textareaRef.current?.value.trim();
     if (!text) return;
     sendMessage(text);
-    setInputText("");
+    if (textareaRef.current) {
+      textareaRef.current.value = "";
+      autoResize(textareaRef.current);
+    }
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    // Desktop Enter = send, Shift+Enter = newline
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -357,13 +385,14 @@ export const ChatPanel = memo(function ChatPanel({
 
       {/* Input bar */}
       <div
+        ref={inputBarRef}
         style={{
           borderTop: "2px solid #1e2840",
           padding: "6px 8px",
           paddingBottom: "max(6px, env(safe-area-inset-bottom))",
           background: "#0a0b16",
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-end",
           gap: 6,
           flexShrink: 0,
         }}
@@ -374,18 +403,24 @@ export const ChatPanel = memo(function ChatPanel({
             fontFamily: "'Press Start 2P', monospace",
             color: "#22d3ee",
             flexShrink: 0,
+            paddingBottom: 2,
           }}
         >
           {selectedAgent ? shortName(selectedAgent.name).slice(0, 6) : "???"} &gt;
         </span>
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           inputMode="text"
           enterKeyHint="send"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+          rows={1}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
+          onChange={(e) => autoResize(e.target)}
+          onFocus={() => {
+            if (isMobile) {
+              setTimeout(() => inputBarRef.current?.scrollIntoView({ block: "end" }), 300);
+            }
+          }}
           placeholder={uploading ? "uploading..." : "type message or paste image..."}
           disabled={uploading}
           style={{
@@ -398,6 +433,10 @@ export const ChatPanel = memo(function ChatPanel({
             fontFamily: "monospace",
             minWidth: 0,
             opacity: uploading ? 0.5 : 1,
+            resize: "none",
+            overflow: "hidden",
+            lineHeight: 1.6,
+            padding: 0,
           }}
         />
         {/* Hidden file input */}

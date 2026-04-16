@@ -7,31 +7,25 @@ interface StatusBarProps {
   sessionCount: number;
   activeView?: string;
   onJump?: () => void;
-  muted?: boolean;
-  onToggleMute?: () => void;
 }
 
 const NAV_ITEMS = [
   { href: "/office/#office",    label: "OFFICE",    id: "office"    },
   { href: "/office/#fleet",     label: "FLEET",     id: "fleet"     },
-  { href: "/office/#mission",   label: "MISSION",   id: "mission"   },
   { href: "/office/#overview",  label: "OVERVIEW",  id: "overview"  },
   { href: "/office/#worktree",  label: "WORKTREE",  id: "worktree"  },
-  { href: "/office/#game",      label: "GAME",      id: "game"      },
   { href: "/",                  label: "TERMINAL",  id: "terminal"  },
 ];
 
 const VIEW_TITLE: Record<string, string> = {
   office:   "LOKI PIXFICE",
   fleet:    "FLEET",
-  mission:  "MISSION CTL",
   overview: "OVERVIEW",
   worktree: "WORKTREES",
-  game:     "GAME VIEW",
 };
 
 const NAV_ICONS: Record<string, string> = {
-  office: "🏢", fleet: "🚀", mission: "🌌", overview: "📊", worktree: "🌿", game: "🎮", terminal: "💻",
+  office: "🏢", fleet: "🚀", overview: "📊", worktree: "🌿", terminal: "💻",
 };
 
 export const StatusBar = memo(function StatusBar({
@@ -40,8 +34,6 @@ export const StatusBar = memo(function StatusBar({
   sessionCount,
   activeView = "office",
   onJump,
-  muted,
-  onToggleMute,
 }: StatusBarProps) {
   const title = VIEW_TITLE[activeView] ?? "LOKI PIXFICE";
   const { isMobile } = useViewport();
@@ -93,24 +85,6 @@ export const StatusBar = memo(function StatusBar({
         )}
 
         <div style={{ flex: 1 }} />
-
-        {/* Mute toggle */}
-        {onToggleMute && (
-          <button
-            onClick={onToggleMute}
-            title={muted ? "Unmute sounds" : "Mute sounds"}
-            style={{
-              padding: "6px 10px", borderRadius: 6,
-              fontSize: 11, cursor: "pointer",
-              background: muted ? "rgba(239,83,80,0.15)" : "rgba(76,175,80,0.15)",
-              color: muted ? "#ef5350" : "#4caf50",
-              border: `1px solid ${muted ? "rgba(239,83,80,0.25)" : "rgba(76,175,80,0.25)"}`,
-              flexShrink: 0,
-            }}
-          >
-            {muted ? "🔇" : "🔊"}
-          </button>
-        )}
 
         {/* Jump button — desktop only */}
         {onJump && !isMobile && (

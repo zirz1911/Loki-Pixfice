@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { PixelKey } from "./PixelKey";
 import { XTerminal, type XTerminalHandle } from "./XTerminal";
 import type { AgentState } from "../lib/types";
@@ -32,6 +32,25 @@ export function TerminalModal({ agent, send: _send, onClose, onNavigate, onSelec
     xtermRef.current?.sendInput(seq);
   }, []);
 
+  // Mobile: adjust modal height when keyboard opens/closes
+  useEffect(() => {
+    if (!isMobile) return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    function onViewportChange() {
+      const el = wrapperRef.current;
+      if (!el) return;
+      el.style.height = viewport!.height + "px";
+      el.style.top = viewport!.offsetTop + "px";
+    }
+    viewport.addEventListener("resize", onViewportChange);
+    viewport.addEventListener("scroll", onViewportChange);
+    return () => {
+      viewport.removeEventListener("resize", onViewportChange);
+      viewport.removeEventListener("scroll", onViewportChange);
+    };
+  }, [isMobile]);
+
   // XTerminal handles its own keyboard/paste — we only need outer modal nav shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
@@ -49,7 +68,10 @@ export function TerminalModal({ agent, send: _send, onClose, onNavigate, onSelec
   return (
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 50,
+        position: "fixed",
+        top: 0, left: 0, right: 0,
+        height: isMobile ? "100dvh" : "100vh",
+        zIndex: 50,
         display: "flex", alignItems: "center", justifyContent: "center",
         background: "rgba(0,0,0,0.88)",
         fontFamily: "'Press Start 2P', monospace",

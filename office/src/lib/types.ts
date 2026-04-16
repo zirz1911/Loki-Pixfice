@@ -24,6 +24,6 @@ export interface AgentState {
 export interface AgentEvent {
   time: number;
   target: string;
-  type: "status" | "command" | "saiyan";
+  type: "status" | "command";
   detail: string;
 }

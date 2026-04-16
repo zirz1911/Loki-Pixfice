@@ -13,22 +13,20 @@ set -e
 
 BUN=/home/paji/.bun/bin/bun
 KVASIR_DIR=/home/paji/Loki-Kvasir
+ATHENA_DIR=/home/paji/Athena-Kvasir
 FREYR_DIR=/home/paji/Freyr-Kvasir
+HERMES_DIR=/home/paji/Hermes-Kvasir
 GEMINI_DIR=/home/paji/Loki-Gemini
 OFFICE_DIR=/home/paji/Project/Loki-Pixfice
 
 # ── Agent definitions: name | work_dir | command ─────────────────────────────
 # Format: "name:workdir:command"
 AGENTS=(
-  "odin:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "loki:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "thor:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "huginn:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "heimdall:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "tyr:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "ymir:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "loki-gemini:$GEMINI_DIR:gemini --yolo"
+  "athena:$ATHENA_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "freyr:$FREYR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "hermes:$HERMES_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "loki-gemini:$GEMINI_DIR:gemini --yolo"
 )
 
 echo "Setting up Loki-Kvasir tmux sessions..."

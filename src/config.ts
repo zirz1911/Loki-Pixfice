@@ -5,13 +5,13 @@ import * as os from "os";
 export interface PixficeConfig {
   host: string;    // tmux host (default: "local")
   port: number;    // server port (default: 3456)
-  session: string; // tmux session name (default: "loki-oracle")
+  session: string; // tmux session name (default: "loki-kvasir")
 }
 
 const DEFAULTS: PixficeConfig = {
   host: "local",
   port: 3456,
-  session: "loki-oracle",
+  session: "loki-kvasir",
 };
 
 const CONFIG_PATH = path.join(os.homedir(), ".config", "loki-pixfice", "config.json");

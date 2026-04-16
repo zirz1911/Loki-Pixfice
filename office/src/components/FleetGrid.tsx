@@ -1,10 +1,8 @@
 import { memo, useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { HoverPreviewCard } from "./HoverPreviewCard";
-import { MiniPreview } from "./MiniPreview";
 import { StageSection } from "./StageSection";
 import { AgentRow } from "./AgentRow";
 import type { FeedLogEntry } from "./AgentRow";
-import { roomStyle, PREVIEW_CARD, agentCategory, CATEGORY_ROOM, type AgentCategory } from "../lib/constants";
+import { roomStyle, agentCategory, CATEGORY_ROOM, type AgentCategory } from "../lib/constants";
 import { BottomStats } from "./BottomStats";
 import { useFps } from "./FpsCounter";
 import { useViewport } from "../hooks/useViewport";
@@ -15,8 +13,6 @@ import { describeActivity, type FeedEvent } from "../lib/feed";
 interface FleetGridProps {
   sessions: Session[];
   agents: AgentState[];
-  saiyanTargets: Set<string>;
-  saiyanSources: Record<string, string>;
   connected: boolean;
   send: (msg: object) => void;
   onSelectAgent: (agent: AgentState) => void;
@@ -82,7 +78,7 @@ function sortRooms(sessions: Session[], agentMap: Map<string, AgentState[]>, mod
 }
 
 export const FleetGrid = memo(function FleetGrid({
-  sessions, agents, saiyanTargets, saiyanSources, connected: _c, send, onSelectAgent, eventLog, addEvent, feedActive: _fa, agentFeedLog,
+  sessions, agents, connected: _c, send, onSelectAgent, eventLog, addEvent, feedActive: _fa, agentFeedLog,
 }: FleetGridProps) {
   const fps = useFps();
   const { isMobile } = useViewport();
@@ -98,56 +94,17 @@ export const FleetGrid = memo(function FleetGrid({
     pruneRecent();
   }, [agents, markBusy, pruneRecent]);
 
-  type PreviewInfo = { agent: AgentState; accent: string; label: string; pos: { x: number; y: number } };
-  const [hoverPreview, setHoverPreview] = useState<PreviewInfo | null>(null);
-  const hoverTimeout = useRef<ReturnType<typeof setTimeout>>();
-  const [pinnedPreview, setPinnedPreview] = useState<PreviewInfo | null>(null);
-  const [pinnedAnimPos, setPinnedAnimPos] = useState<{ left: number; top: number } | null>(null);
-  const pinnedRef = useRef<HTMLDivElement>(null);
+  const showPreview = useCallback((_agent: AgentState, _accent: string, _label: string, _e: React.MouseEvent) => {}, []);
+  const hidePreview = useCallback(() => {}, []);
 
-  const showPreview = useCallback((agent: AgentState, accent: string, label: string, e: React.MouseEvent) => {
-    if (pinnedPreview) return;
-    clearTimeout(hoverTimeout.current);
-    const cardW = PREVIEW_CARD.width;
-    let x = e.clientX + 8;
-    if (x + cardW > window.innerWidth - 8) x = e.clientX - cardW - 8;
-    if (x < 8) x = 8;
-    setHoverPreview({ agent, accent, label, pos: { x, y: e.clientY - 120 } });
-  }, [pinnedPreview]);
-
-  const hidePreview = useCallback(() => {
-    hoverTimeout.current = setTimeout(() => setHoverPreview(null), 300);
-  }, []);
-
-  const keepPreview = useCallback(() => { clearTimeout(hoverTimeout.current); }, []);
-
-  const onAgentClick = useCallback((agent: AgentState, accent: string, label: string, e: React.MouseEvent) => {
+  const onAgentClick = useCallback((agent: AgentState, _accent: string, _label: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (pinnedPreview && pinnedPreview.agent.target === agent.target) { setPinnedPreview(null); return; }
-    setPinnedPreview({ agent, accent, label, pos: { x: e.clientX, y: e.clientY } });
-    setHoverPreview(null);
-    send({ type: "subscribe", target: agent.target });
-  }, [pinnedPreview, send]);
+    onSelectAgent(agent);
+  }, [onSelectAgent]);
 
-  const onSendDone = useCallback((agent: AgentState, accent: string, label: string) => {
-    setPinnedPreview({ agent, accent, label, pos: { x: window.innerWidth / 2, y: window.innerHeight / 2 } });
-    setHoverPreview(null);
-    send({ type: "subscribe", target: agent.target });
-  }, [send]);
-
-  useEffect(() => {
-    if (pinnedPreview) {
-      setPinnedAnimPos({
-        left: (window.innerWidth - PREVIEW_CARD.width) / 2,
-        top: Math.max(40, (window.innerHeight - PREVIEW_CARD.maxHeight) / 2),
-      });
-    } else { setPinnedAnimPos(null); }
-  }, [pinnedPreview]);
-
-  const onPinnedFullscreen = useCallback(() => {
-    if (pinnedPreview) { const a = pinnedPreview.agent; setPinnedPreview(null); setTimeout(() => onSelectAgent(a), 150); }
-  }, [pinnedPreview, onSelectAgent]);
-  const onPinnedClose = useCallback(() => setPinnedPreview(null), []);
+  const onSendDone = useCallback((agent: AgentState) => {
+    onSelectAgent(agent);
+  }, [onSelectAgent]);
 
   const sessionAgents = useMemo(() => {
     const map = new Map<string, AgentState[]>();
@@ -294,7 +251,6 @@ export const FleetGrid = memo(function FleetGrid({
       <StageSection
         busyAgents={busyAgents}
         recentlyActive={recentlyActive}
-        saiyanTargets={saiyanTargets}
         recentMap={recentMap}
         showPreview={showPreview}
         hidePreview={hidePreview}
@@ -359,7 +315,6 @@ export const FleetGrid = memo(function FleetGrid({
                 return (
                   <AgentRow key={`recent-${entry.target}`}
                     agent={agent} accent={rs.accent} roomLabel={rs.label}
-                    saiyan={saiyanTargets.has(entry.target)} saiyanSource={saiyanSources[entry.target]}
                     isLast={i === recentlyActive.length - 1}
                     featured={i === 0} agoLabel={agoLabel} feedLog={getAgentFeedLog(agent.name)}
                     observe={observe} showPreview={showPreview} hidePreview={hidePreview} onAgentClick={onAgentClick}
@@ -442,7 +397,6 @@ export const FleetGrid = memo(function FleetGrid({
                 {vr.agents.map((agent, i) => (
                   <AgentRow key={agent.target}
                     agent={agent} accent={vr.accent} roomLabel={vr.label}
-                    saiyan={saiyanTargets.has(agent.target)} saiyanSource={saiyanSources[agent.target]}
                     isLast={i === vr.agents.length - 1}
                     feedLog={getAgentFeedLog(agent.name)}
                     observe={observe} showPreview={showPreview} hidePreview={hidePreview} onAgentClick={onAgentClick}
@@ -472,57 +426,6 @@ export const FleetGrid = memo(function FleetGrid({
       </div>
 
       <BottomStats agents={agents} />
-
-      {/* Hover Preview */}
-      {hoverPreview && !pinnedPreview && (
-        <div
-          style={{
-            position: "fixed", zIndex: 30, pointerEvents: "auto",
-            left: hoverPreview.pos.x, top: hoverPreview.pos.y,
-            animation: "fadeSlideIn 0.15s ease-out",
-          }}
-          onMouseEnter={keepPreview}
-          onMouseLeave={hidePreview}
-          onClick={(e) => onAgentClick(hoverPreview.agent, hoverPreview.accent, hoverPreview.label, e)}
-        >
-          <MiniPreview agent={hoverPreview.agent} accent={hoverPreview.accent} roomLabel={hoverPreview.label} />
-        </div>
-      )}
-
-      {/* Backdrop */}
-      {pinnedPreview && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 35,
-            background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)",
-          }}
-          onClick={onPinnedClose}
-        />
-      )}
-
-      {/* Pinned Preview */}
-      {pinnedPreview && pinnedAnimPos && (
-        <div
-          ref={pinnedRef}
-          style={{
-            position: "fixed", zIndex: 40, pointerEvents: "auto",
-            left: pinnedAnimPos.left, top: pinnedAnimPos.top,
-            maxWidth: PREVIEW_CARD.width,
-          }}
-        >
-          <HoverPreviewCard
-            agent={pinnedPreview.agent}
-            roomLabel={pinnedPreview.label}
-            accent={pinnedPreview.accent}
-            pinned
-            send={send}
-            onFullscreen={onPinnedFullscreen}
-            onClose={onPinnedClose}
-            eventLog={eventLog}
-            addEvent={addEvent}
-          />
-        </div>
-      )}
     </div>
   );
 });

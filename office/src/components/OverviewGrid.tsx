@@ -13,7 +13,6 @@ function sessionNum(name: string): number {
 interface OverviewGridProps {
   sessions: Session[];
   agents: AgentState[];
-  saiyanTargets: Set<string>;
   connected: boolean;
   send: (msg: object) => void;
   onSelectAgent: (agent: AgentState) => void;
@@ -159,7 +158,6 @@ const OverviewTile = memo(function OverviewTile({
 export const OverviewGrid = memo(function OverviewGrid({
   sessions,
   agents,
-  saiyanTargets: _st,
   connected: _c,
   send: _s,
   onSelectAgent,

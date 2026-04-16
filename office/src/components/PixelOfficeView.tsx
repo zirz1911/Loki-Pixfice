@@ -2,7 +2,6 @@ import { memo, useMemo, useState, useEffect, useRef } from "react";
 import { LeftSidebar } from "./LeftSidebar";
 import { DepartmentRoom } from "./DepartmentRoom";
 import { ChatPanel } from "./ChatPanel";
-import { UniverseBg } from "./UniverseBg";
 import { useViewport } from "../hooks/useViewport";
 import { agentCategory, type AgentCategory } from "../lib/constants";
 import type { AgentState, Session } from "../lib/types";
@@ -21,9 +20,8 @@ interface CEOBarProps {
 const ALL_NAV = [
   { href: "/office/#office",    label: "OFFICE",    icon: "🏢", id: "office"    },
   { href: "/office/#fleet",     label: "FLEET",     icon: "🚀", id: "fleet"     },
-  { href: "/office/#mission",   label: "MISSION",   icon: "🌌", id: "mission"   },
   { href: "/office/#overview",  label: "OVERVIEW",  icon: "📊", id: "overview"  },
-  { href: "/office/#game",      label: "GAME",      icon: "🎮", id: "game"      },
+  { href: "/office/#worktree",  label: "WORKTREE",  icon: "🌿", id: "worktree"  },
   { href: "/",                  label: "TERMINAL",  icon: "💻", id: "terminal"  },
 ];
 
@@ -227,11 +225,10 @@ interface PixelOfficeViewProps {
   connected: boolean;
   send: (msg: object) => void;
   onSelectAgent: (a: AgentState) => void;
-  saiyanTargets?: Set<string>;
 }
 
 export const PixelOfficeView = memo(function PixelOfficeView({
-  sessions, agents, msgs, connected, send, onSelectAgent, saiyanTargets,
+  sessions, agents, msgs, connected, send, onSelectAgent,
 }: PixelOfficeViewProps) {
   const { isMobile, isTablet } = useViewport();
   const [chatOpen, setChatOpen] = useState(false);
@@ -291,8 +288,8 @@ export const PixelOfficeView = memo(function PixelOfficeView({
       width: "100vw",
       overflow: "hidden",
       position: "relative",
+      background: "#060614",
     }}>
-      <UniverseBg />
 
       {/* Left sidebar — desktop only */}
       {!isMobile && (
@@ -366,7 +363,6 @@ export const PixelOfficeView = memo(function PixelOfficeView({
                     sessionIdx={idx}
                     onSelectAgent={onSelectAgent}
                     isMobile={isMobile}
-                    saiyanTargets={saiyanTargets}
                   />
                 ))}
               </div>

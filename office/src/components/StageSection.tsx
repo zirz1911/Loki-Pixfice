@@ -1,5 +1,4 @@
 import { memo, useMemo } from "react";
-import { AgentAvatar } from "./AgentAvatar";
 import { roomStyle } from "../lib/constants";
 import { useViewport } from "../hooks/useViewport";
 import type { RecentEntry } from "../lib/store";
@@ -8,7 +7,6 @@ import type { AgentState } from "../lib/types";
 interface StageSectionProps {
   busyAgents: AgentState[];
   recentlyActive: (AgentState | RecentEntry)[];
-  saiyanTargets: Set<string>;
   recentMap: Record<string, RecentEntry>;
   showPreview: (agent: AgentState, accent: string, label: string, e: React.MouseEvent) => void;
   hidePreview: () => void;
@@ -30,7 +28,7 @@ function ghostSize(lastBusy: number, sizeBig: number, sizeSmall: number): number
 }
 
 export const StageSection = memo(function StageSection({
-  busyAgents, recentlyActive, saiyanTargets, recentMap, showPreview, hidePreview, onAgentClick,
+  busyAgents, recentlyActive, recentMap, showPreview, hidePreview, onAgentClick,
 }: StageSectionProps) {
   const { isMobile } = useViewport();
   const SIZE_BIG = isMobile ? SIZE_BIG_MOBILE : SIZE_BIG_DESKTOP;
@@ -43,14 +41,13 @@ export const StageSection = memo(function StageSection({
     }
     for (const entry of recentlyActive) {
       if (seenNames.has(entry.name)) continue;
-      if (!saiyanTargets.has(entry.target)) continue;
       seenNames.add(entry.name);
       if ("status" in entry) result.push(entry as AgentState);
       else result.push({ target: entry.target, name: entry.name, session: entry.session, windowIndex: 0, active: false, preview: "", status: "busy" });
     }
     result.sort((a, b) => (recentMap[b.target]?.lastBusy || 0) - (recentMap[a.target]?.lastBusy || 0));
     return result;
-  }, [busyAgents, recentlyActive, saiyanTargets, recentMap]);
+  }, [busyAgents, recentlyActive, recentMap]);
 
   const ghostAgents = useMemo(() => {
     const activeNames = new Set(activeAgents.map(a => a.name));
@@ -145,7 +142,6 @@ export const StageSection = memo(function StageSection({
           {/* Active performers */}
           {activeAgents.map((agent) => {
             const rs = roomStyle(agent.session);
-            const isSaiyan = saiyanTargets.has(agent.target);
             const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ");
             return (
               <div
@@ -165,16 +161,11 @@ export const StageSection = memo(function StageSection({
                 }}
                 onClick={(e) => onAgentClick(agent, rs.accent, rs.label, e)}
               >
-                <div style={{
-                  position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)",
-                  width: SIZE_BIG - 16, height: SIZE_BIG, pointerEvents: "none",
-                  background: `radial-gradient(ellipse at 50% 0%, ${rs.accent}15 0%, transparent 70%)`,
-                }} />
                 <div style={{ width: SIZE_BIG, height: SIZE_BIG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <AgentAvatar
-                    name={agent.name} target={agent.target} status={agent.status}
-                    preview={agent.preview} accent={rs.accent} saiyan={isSaiyan} onClick={() => {}}
-                  />
+                  <div style={{
+                    width: 28, height: 28, background: "#fdd835",
+                    boxShadow: "0 0 12px #fdd835", animation: "pixel-glow 1s ease-in-out infinite",
+                  }} />
                 </div>
                 <span style={{
                   fontSize: 12, fontWeight: 600, textAlign: "center",
@@ -183,12 +174,6 @@ export const StageSection = memo(function StageSection({
                 }}>
                   {displayName}
                 </span>
-                {isSaiyan && (
-                  <span style={{
-                    fontSize: 9, fontFamily: "monospace", padding: "2px 8px", borderRadius: 4,
-                    background: "rgba(251,191,36,0.2)", color: "#fbbf24",
-                  }}>⚡</span>
-                )}
               </div>
             );
           })}
@@ -223,10 +208,7 @@ export const StageSection = memo(function StageSection({
                 onClick={(e) => onAgentClick(agent, rs.accent, rs.label, e)}
               >
                 <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", transition: "width 2s ease-out, height 2s ease-out" }}>
-                  <AgentAvatar
-                    name={agent.name} target={agent.target} status={agent.status}
-                    preview={agent.preview} accent={rs.accent} saiyan={false} onClick={() => {}}
-                  />
+                  <div style={{ width: Math.max(16, size * 0.4), height: Math.max(16, size * 0.4), background: "#445566" }} />
                 </div>
                 <span style={{
                   fontWeight: 600, textAlign: "center", color: "#64748B",

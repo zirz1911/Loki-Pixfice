@@ -215,11 +215,12 @@
   /* Input line */
   .term-input-line {
     padding: 8px 14px; border-top: 2px solid #1e2840; background: #0a0b16;
-    font-size: 13px; min-height: 34px; display: flex; align-items: center;
+    font-size: 13px; min-height: 34px; display: flex; align-items: flex-start;
+    flex-wrap: wrap; gap: 4px;
     color: #22d3ee;
   }
-  .term-input-line .prompt { color: #22d3ee; margin-right: 8px; font-size: 13px; }
-  .term-input-line .text { color: #e0e8ff; white-space: pre; }
+  .term-input-line .prompt { color: #22d3ee; margin-right: 4px; font-size: 13px; padding-top: 1px; flex-shrink: 0; }
+  .term-input-line .text { color: #e0e8ff; white-space: pre-wrap; word-break: break-all; flex: 1; }
   .term-input-line .cursor {
     display: inline-block; width: 7px; height: 15px; background: #64b5f6;
     animation: blink 1s step-end infinite; vertical-align: middle; margin-left: 1px;
@@ -672,26 +673,45 @@ el('mobileInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
     if (inputBuf) { queueSend(inputBuf); inputBuf = ''; updateInputLine(); }
+    el('mobileInput').value = ''; mobileInputLastLen = 0;
   } else if (e.key === 'Backspace') {
     e.preventDefault();
     if (e.metaKey || e.ctrlKey) inputBuf = '';
     else inputBuf = inputBuf.slice(0, -1);
+    // sync mobileInput value to match inputBuf length so IME stays aligned
+    el('mobileInput').value = inputBuf;
+    mobileInputLastLen = inputBuf.length;
     updateInputLine();
   } else if (e.key === 'Escape') {
-    e.preventDefault(); clearInput();
+    e.preventDefault();
+    clearInput();
+    el('mobileInput').value = ''; mobileInputLastLen = 0;
   } else if (e.key === 'Tab') {
     e.preventDefault();
     queueSend(inputBuf + '\t'); inputBuf = ''; updateInputLine();
+    el('mobileInput').value = ''; mobileInputLastLen = 0;
   }
 });
 
 // Mobile input: input event — captures typed characters
+// ไม่ clear value หลังทุก keystroke — ทำให้ Thai keyboard เสีย Shift state
+// ใช้ length tracking แทน
+let mobileInputLastLen = 0;
 el('mobileInput').addEventListener('input', () => {
   const val = el('mobileInput').value;
-  el('mobileInput').value = '';
-  if (!val || !selectedTarget || !ws || ws.readyState !== 1) return;
-  inputBuf += val;
-  updateInputLine();
+  if (val.length > mobileInputLastLen) {
+    const newChars = val.slice(mobileInputLastLen);
+    mobileInputLastLen = val.length;
+    if (!newChars || !selectedTarget || !ws || ws.readyState !== 1) return;
+    inputBuf += newChars;
+    updateInputLine();
+  } else if (val.length < mobileInputLastLen) {
+    // IME deleted chars — sync inputBuf
+    const deleted = mobileInputLastLen - val.length;
+    inputBuf = inputBuf.slice(0, -deleted);
+    mobileInputLastLen = val.length;
+    updateInputLine();
+  }
 });
 
 function showToast(msg, error = false) {
@@ -715,6 +735,13 @@ if (location.hash) {
 }
 connect();
 if (!isMobile) setTimeout(() => el('term').focus(), 100); // mobile: ไม่ auto-focus
+
+// Mobile keyboard avoidance — scroll input line above keyboard
+if (isMobile && window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    el('inputLine').scrollIntoView({ block: 'end' });
+  });
+}
 </script>
 </body>
 </html>

@@ -1,5 +1,4 @@
 import { memo } from "react";
-import { AgentAvatar } from "./AgentAvatar";
 import type { AgentState, Session } from "../lib/types";
 
 // ── Room config per tmux session ─────────────────────────────────────────────
@@ -158,45 +157,30 @@ interface DeskSlotProps {
   onSelect: (a: AgentState) => void;
   now: number;
   isMobile?: boolean;
-  isSaiyan?: boolean;
 }
 
-function DeskSlot({ agent, style, onSelect, now, isMobile = false, isSaiyan = false }: DeskSlotProps) {
+function DeskSlot({ agent, style, onSelect, now, isMobile = false }: DeskSlotProps) {
   const busy = agent.status === "busy";
   const ready = agent.status === "ready";
   const dotColor = busy ? "#fdd835" : ready ? "#4caf50" : "#445566";
 
   return (
-    <div className="flex flex-col items-center" style={{
-      width: isMobile ? "100%" : 104, gap: 4,
-      animation: isSaiyan ? "saiyanPulse 0.6s ease-in-out infinite" : undefined,
-      filter: isSaiyan ? `drop-shadow(0 0 8px ${style.accent}) drop-shadow(0 0 16px #ffd700)` : undefined,
-    }}>
+    <div className="flex flex-col items-center" style={{ width: isMobile ? "100%" : 104, gap: 4 }}>
       {/* Desk */}
       <PixelDesk accent={style.accent} busy={busy} now={now} />
 
-      {/* Agent sprite */}
+      {/* Agent dot avatar */}
       <div
         className="cursor-pointer"
-        style={{ marginTop: -2, position: "relative" }}
+        style={{ marginTop: -2, display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 48 }}
         onClick={() => onSelect(agent)}
       >
-        {isSaiyan && (
-          <div style={{
-            position: "absolute", inset: -8, borderRadius: "50%",
-            background: `radial-gradient(circle, #ffd70040 0%, ${style.accent}20 50%, transparent 70%)`,
-            animation: "saiyan-aura 1.2s ease-in-out infinite",
-            pointerEvents: "none",
-          }} />
-        )}
-        <AgentAvatar
-          name={agent.name}
-          target={agent.target}
-          status={agent.status}
-          preview={agent.preview}
-          accent={style.accent}
-          onClick={() => onSelect(agent)}
-        />
+        <div style={{
+          width: 24, height: 24,
+          background: dotColor,
+          boxShadow: busy ? `0 0 8px ${dotColor}` : "none",
+          animation: busy ? "pixel-glow 1s ease-in-out infinite" : "none",
+        }} />
       </div>
 
       {/* Name tag */}
@@ -269,14 +253,17 @@ function BreakRoom({ agents, style, onSelect }: { agents: AgentState[]; style: R
         ☕ BREAK ROOM
       </div>
       <div className="flex flex-wrap gap-2">
-        {agents.map((ag) => (
-          <div key={ag.target} className="flex flex-col items-center cursor-pointer" onClick={() => onSelect(ag)}>
-            <AgentAvatar name={ag.name} target={ag.target} status={ag.status} preview={ag.preview} accent={style.accent} onClick={() => onSelect(ag)} />
-            <div style={{ fontSize: 9, color: `${style.accent}80`, fontFamily: "'Press Start 2P', monospace", marginTop: 2 }}>
-              {ag.name.replace(/-oracle$/, "").slice(0, 8).toUpperCase()}
+        {agents.map((ag) => {
+          const dc = ag.status === "busy" ? "#fdd835" : ag.status === "ready" ? "#4caf50" : "#445566";
+          return (
+            <div key={ag.target} className="flex flex-col items-center cursor-pointer" onClick={() => onSelect(ag)}>
+              <div style={{ width: 20, height: 20, background: dc, boxShadow: ag.status === "busy" ? `0 0 6px ${dc}` : "none" }} />
+              <div style={{ fontSize: 9, color: `${style.accent}80`, fontFamily: "'Press Start 2P', monospace", marginTop: 2 }}>
+                {ag.name.replace(/-oracle$/, "").slice(0, 8).toUpperCase()}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -289,7 +276,6 @@ interface DepartmentRoomProps {
   sessionIdx: number;
   onSelectAgent: (a: AgentState) => void;
   isMobile?: boolean;
-  saiyanTargets?: Set<string>;
 }
 
 export const DepartmentRoom = memo(function DepartmentRoom({
@@ -298,7 +284,6 @@ export const DepartmentRoom = memo(function DepartmentRoom({
   sessionIdx,
   onSelectAgent,
   isMobile = false,
-  saiyanTargets,
 }: DepartmentRoomProps) {
   const style = getRoomStyle(session.name, sessionIdx);
   const now = Date.now();
@@ -425,7 +410,7 @@ export const DepartmentRoom = memo(function DepartmentRoom({
               >
                 {slots.map((ag, i) =>
                   ag ? (
-                    <DeskSlot key={ag.target} agent={ag} style={style} onSelect={onSelectAgent} now={now} isMobile={isMobile} isSaiyan={saiyanTargets?.has(ag.target)} />
+                    <DeskSlot key={ag.target} agent={ag} style={style} onSelect={onSelectAgent} now={now} isMobile={isMobile} />
                   ) : (
                     <EmptyDesk key={`empty-${i}`} style={style} isMobile={isMobile} />
                   )
