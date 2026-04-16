@@ -46,7 +46,7 @@ export const ShortcutOverlay = memo(function ShortcutOverlay({ onClose }: Shortc
         position: "fixed", inset: 0, zIndex: 60,
         display: "flex", alignItems: "center", justifyContent: "center",
         background: "rgba(0,0,0,0.80)",
-        fontFamily: "'Press Start 2P', monospace",
+        fontFamily: "'Silkscreen', 'SF Mono', monospace",
         imageRendering: "pixelated",
       }}
       onClick={onClose}
@@ -115,7 +115,7 @@ export const ShortcutOverlay = memo(function ShortcutOverlay({ onClose }: Shortc
               border: "2px solid #2a3a50",
               color: "#5a8cff",
               fontSize: 9,
-              fontFamily: "'Press Start 2P', monospace",
+              fontFamily: "'Silkscreen', 'SF Mono', monospace",
               padding: "8px 20px",
               cursor: "pointer",
               letterSpacing: 1,

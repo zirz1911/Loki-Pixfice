@@ -162,7 +162,7 @@ interface DeskSlotProps {
 function DeskSlot({ agent, style, onSelect, now, isMobile = false }: DeskSlotProps) {
   const busy = agent.status === "busy";
   const ready = agent.status === "ready";
-  const dotColor = busy ? "#fdd835" : ready ? "#4caf50" : "#445566";
+  const dotColor = busy ? "oklch(0.85 0.20 142)" : ready ? "#22d3ee" : "#445566";
 
   return (
     <div className="flex flex-col items-center" style={{ width: isMobile ? "100%" : 104, gap: 4 }}>
@@ -186,7 +186,7 @@ function DeskSlot({ agent, style, onSelect, now, isMobile = false }: DeskSlotPro
       {/* Name tag */}
       <div
         style={{
-          fontFamily: "'Press Start 2P', monospace",
+          fontFamily: "'Silkscreen', 'SF Mono', monospace",
           fontSize: isMobile ? 10 : 9,
           color: style.accent,
           textAlign: "center",
@@ -204,7 +204,7 @@ function DeskSlot({ agent, style, onSelect, now, isMobile = false }: DeskSlotPro
       <div
         style={{
           fontSize: isMobile ? 8 : 7,
-          fontFamily: "'Press Start 2P', monospace",
+          fontFamily: "'Silkscreen', 'SF Mono', monospace",
           color: dotColor,
           background: "#08080f",
           padding: "2px 6px",
@@ -230,7 +230,7 @@ function EmptyDesk({ style, isMobile = false }: { style: RoomStyle; isMobile?: b
     <div className="flex flex-col items-center" style={{ width: isMobile ? "100%" : 104, gap: 3, opacity: 0.35 }}>
       <PixelDesk accent={style.accent} busy={false} now={0} />
       <div style={{ width: 32, height: 48 }} /> {/* empty avatar space */}
-      <div style={{ fontSize: 7, color: `${style.accent}50`, fontFamily: "'Press Start 2P', monospace" }}>
+      <div style={{ fontSize: 7, color: `${style.accent}50`, fontFamily: "'Silkscreen', 'SF Mono', monospace" }}>
         VACANT
       </div>
     </div>
@@ -249,16 +249,16 @@ function BreakRoom({ agents, style, onSelect }: { agents: AgentState[]; style: R
         margin: "6px 8px 0",
       }}
     >
-      <div style={{ fontSize: 10, color: `${style.accent}60`, fontFamily: "'Press Start 2P', monospace", marginBottom: 6 }}>
+      <div style={{ fontSize: 10, color: `${style.accent}60`, fontFamily: "'Silkscreen', 'SF Mono', monospace", marginBottom: 6 }}>
         ☕ BREAK ROOM
       </div>
       <div className="flex flex-wrap gap-2">
         {agents.map((ag) => {
-          const dc = ag.status === "busy" ? "#fdd835" : ag.status === "ready" ? "#4caf50" : "#445566";
+          const dc = ag.status === "busy" ? "oklch(0.85 0.20 142)" : ag.status === "ready" ? "#22d3ee" : "#445566";
           return (
             <div key={ag.target} className="flex flex-col items-center cursor-pointer" onClick={() => onSelect(ag)}>
               <div style={{ width: 20, height: 20, background: dc, boxShadow: ag.status === "busy" ? `0 0 6px ${dc}` : "none" }} />
-              <div style={{ fontSize: 9, color: `${style.accent}80`, fontFamily: "'Press Start 2P', monospace", marginTop: 2 }}>
+              <div style={{ fontSize: 9, color: `${style.accent}80`, fontFamily: "'Silkscreen', 'SF Mono', monospace", marginTop: 2 }}>
                 {ag.name.replace(/-oracle$/, "").slice(0, 8).toUpperCase()}
               </div>
             </div>
@@ -320,7 +320,7 @@ export const DepartmentRoom = memo(function DepartmentRoom({
           display: "flex",
           alignItems: "center",
           gap: 6,
-          fontFamily: "'Press Start 2P', monospace",
+          fontFamily: "'Silkscreen', 'SF Mono', monospace",
         }}
       >
         {/* Status gem */}
@@ -355,7 +355,7 @@ export const DepartmentRoom = memo(function DepartmentRoom({
         <span
           style={{
             fontSize: isMobile ? 10 : 11,
-            color: hasBusy ? "#fdd835" : style.accent,
+            color: hasBusy ? "oklch(0.85 0.20 142)" : style.accent,
             animation: hasBusy ? "agent-pulse 1s ease-in-out infinite" : "none",
           }}
         >
@@ -391,7 +391,7 @@ export const DepartmentRoom = memo(function DepartmentRoom({
         }}
       >
         {agents.length === 0 ? (
-          <div style={{ textAlign: "center", color: `${style.accent}40`, fontFamily: "'Press Start 2P', monospace", fontSize: 9, paddingTop: 20 }}>
+          <div style={{ textAlign: "center", color: `${style.accent}40`, fontFamily: "'Silkscreen', 'SF Mono', monospace", fontSize: 9, paddingTop: 20 }}>
             ᚾ EMPTY ᚾ
           </div>
         ) : (

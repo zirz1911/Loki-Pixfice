@@ -71,8 +71,8 @@ export const StageSection = memo(function StageSection({
       <div style={{
         position: "relative", borderRadius: 16, overflow: "hidden",
         background: hasBusy
-          ? "linear-gradient(180deg, #1a1510 0%, #0f0d0a 60%, #0a0a12 100%)"
-          : "linear-gradient(180deg, #121218 0%, #0e0e14 60%, #0a0a12 100%)",
+          ? "linear-gradient(180deg, #1a1510 0%, #0f0d0a 60%, #0d0d0d 100%)"
+          : "linear-gradient(180deg, #121218 0%, #0e0e14 60%, #0d0d0d 100%)",
         border: hasBusy ? "1px solid rgba(251,191,36,0.15)" : "1px solid rgba(255,255,255,0.06)",
         boxShadow: hasBusy
           ? "0 0 40px rgba(251,191,36,0.06), inset 0 -2px 20px rgba(0,0,0,0.4)"
@@ -99,8 +99,8 @@ export const StageSection = memo(function StageSection({
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, padding: "16px 24px 8px" }}>
           <span style={{
             width: 10, height: 10, borderRadius: "50%",
-            background: hasBusy ? "#fbbf24" : "#64748B",
-            boxShadow: hasBusy ? "0 0 10px #ffa726" : "none",
+            background: hasBusy ? "oklch(0.85 0.20 142)" : "#64748B",
+            boxShadow: hasBusy ? "0 0 10px oklch(0.85 0.20 142)" : "none",
             animation: hasBusy ? "agent-pulse 2s infinite" : "none",
           }} />
           <span style={{
@@ -113,7 +113,7 @@ export const StageSection = memo(function StageSection({
             fontSize: 12, fontFamily: "monospace", fontWeight: "bold",
             padding: "2px 10px", borderRadius: 6,
             background: hasBusy ? "rgba(251,191,36,0.15)" : "rgba(255,255,255,0.05)",
-            color: hasBusy ? "#fbbf24" : "#64748B",
+            color: hasBusy ? "oklch(0.85 0.20 142)" : "#64748B",
           }}>
             {activeAgents.length}
           </span>
@@ -121,7 +121,7 @@ export const StageSection = memo(function StageSection({
             {[0, 1, 2, 3, 4].map(i => (
               <div key={i} style={{
                 width: 6, height: 6, borderRadius: "50%",
-                background: hasBusy ? "#fbbf24" : "#64748B",
+                background: hasBusy ? "oklch(0.85 0.20 142)" : "#64748B",
                 opacity: hasBusy ? 0.2 + (i % 2) * 0.15 : 0.1 + (i % 2) * 0.05,
                 boxShadow: hasBusy ? "0 0 3px rgba(251,191,36,0.3)" : "none",
               }} />
@@ -163,8 +163,8 @@ export const StageSection = memo(function StageSection({
               >
                 <div style={{ width: SIZE_BIG, height: SIZE_BIG, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <div style={{
-                    width: 28, height: 28, background: "#fdd835",
-                    boxShadow: "0 0 12px #fdd835", animation: "pixel-glow 1s ease-in-out infinite",
+                    width: 28, height: 28, background: "oklch(0.85 0.20 142)",
+                    boxShadow: "0 0 12px oklch(0.85 0.20 142)", animation: "pixel-glow 1s ease-in-out infinite",
                   }} />
                 </div>
                 <span style={{

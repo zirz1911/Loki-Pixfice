@@ -4,6 +4,13 @@ const _cfg = loadConfig();
 const DEFAULT_HOST = process.env.MAW_HOST || _cfg.host;
 const IS_LOCAL = DEFAULT_HOST === "local" || DEFAULT_HOST === "localhost";
 
+// Session names to include — read from PIXFICE_SESSIONS env var (comma-separated)
+// or falls back to the single configured session name.
+// loki-pty-* sessions are always excluded (they're ephemeral viewer sessions).
+const ALLOWED_SESSIONS: string[] = process.env.PIXFICE_SESSIONS
+  ? process.env.PIXFICE_SESSIONS.split(",").map(s => s.trim()).filter(Boolean)
+  : [_cfg.session];
+
 export async function ssh(cmd: string, host = DEFAULT_HOST): Promise<string> {
   const local = host === "local" || host === "localhost" || IS_LOCAL;
   const args = local ? ["bash", "-c", cmd] : ["ssh", host, cmd];
@@ -32,6 +39,10 @@ export async function listSessions(host?: string): Promise<Session[]> {
   const raw = await ssh("tmux list-sessions -F '#{session_name}' 2>/dev/null", host);
   const sessions: Session[] = [];
   for (const s of raw.split("\n").filter(Boolean)) {
+    // Skip ephemeral viewer sessions and any session not in the allow-list
+    if (s.startsWith("loki-pty-")) continue;
+    if (!ALLOWED_SESSIONS.includes(s)) continue;
+
     const winRaw = await ssh(
       `tmux list-windows -t '${s}' -F '#{window_index}:#{window_name}:#{window_active}' 2>/dev/null`,
       host,

@@ -49,13 +49,13 @@ const CEOBar = memo(function CEOBar({
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
       <span style={{
         fontSize: isMobile ? 24 : 28, color, fontWeight: "bold",
-        fontFamily: "'Press Start 2P', monospace",
+        fontFamily: "'Silkscreen', 'SF Mono', monospace",
         animation: anim && val > 0 ? "agent-pulse 1s infinite" : "none",
         lineHeight: 1,
       }}>
         {val}
       </span>
-      <span style={{ fontSize: isMobile ? 6 : 8, color: "#445566", fontFamily: "'Press Start 2P', monospace" }}>
+      <span style={{ fontSize: isMobile ? 6 : 8, color: "#445566", fontFamily: "'Silkscreen', 'SF Mono', monospace" }}>
         {label}
       </span>
     </div>
@@ -70,7 +70,7 @@ const CEOBar = memo(function CEOBar({
         display: "flex",
         alignItems: "center",
         gap: isMobile ? 12 : 20,
-        fontFamily: "'Press Start 2P', monospace",
+        fontFamily: "'Silkscreen', 'SF Mono', monospace",
         imageRendering: "pixelated",
       }}>
         {/* Title */}
@@ -87,8 +87,8 @@ const CEOBar = memo(function CEOBar({
 
         {/* Stats */}
         {stat("STAFF", total, "#8090c0")}
-        {stat("WORK", busy, "#fdd835", true)}
-        {!isMobile && stat("READY", ready, "#4caf50")}
+        {stat("WORK", busy, "oklch(0.85 0.20 142)", true)}
+        {!isMobile && stat("READY", ready, "#22d3ee")}
         {!isMobile && stat("ROOMS", sessions.length, "#5a8cff")}
 
         {/* Power bar */}
@@ -97,13 +97,13 @@ const CEOBar = memo(function CEOBar({
             <div style={{
               height: "100%",
               width: `${total > 0 ? (busy / total) * 100 : 0}%`,
-              background: busy > 4 ? "#ff6040" : busy > 2 ? "#ffa040" : "#fdd835",
+              background: busy > 4 ? "#ff6040" : busy > 2 ? "#ffa040" : "oklch(0.85 0.20 142)",
               transition: "width 0.5s ease",
             }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontSize: 7, color: "#2a3a50" }}>PWR</span>
-            <span style={{ fontSize: 7, color: "#fdd835" }}>
+            <span style={{ fontSize: 7, color: "oklch(0.85 0.20 142)" }}>
               {total > 0 ? Math.round((busy / total) * 100) : 0}%
             </span>
           </div>
@@ -120,7 +120,7 @@ const CEOBar = memo(function CEOBar({
                 return (
                   <a key={n.id} href={n.href} style={{
                     fontSize: 10,
-                    fontFamily: "'Press Start 2P', monospace",
+                    fontFamily: "'Silkscreen', 'SF Mono', monospace",
                     color: active ? "#5a8cff" : "#5a6a80",
                     textDecoration: "none",
                     borderBottom: active ? "2px solid #5a8cff" : "2px solid transparent",
@@ -141,11 +141,11 @@ const CEOBar = memo(function CEOBar({
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           <div style={{
             width: 8, height: 8,
-            background: connected ? "#4caf50" : "#ff6b6b",
+            background: connected ? "#22d3ee" : "#ff6b6b",
             animation: connected ? "pixel-glow 2s infinite" : "agent-pulse 0.8s infinite",
           }} />
           {!isMobile && (
-            <span style={{ fontSize: 9, color: connected ? "#4caf50" : "#ff6b6b" }}>
+            <span style={{ fontSize: 9, color: connected ? "#22d3ee" : "#ff6b6b" }}>
               {connected ? "LIVE" : "DISC"}
             </span>
           )}
@@ -199,7 +199,7 @@ const CEOBar = memo(function CEOBar({
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "14px 20px", textDecoration: "none",
-                  fontFamily: "'Press Start 2P', monospace", fontSize: 10,
+                  fontFamily: "'Silkscreen', 'SF Mono', monospace", fontSize: 10,
                   color: active ? "#5a8cff" : "#5a6a80",
                   background: active ? "#5a8cff10" : "transparent",
                   borderLeft: active ? "3px solid #5a8cff" : "3px solid transparent",
@@ -322,7 +322,7 @@ export const PixelOfficeView = memo(function PixelOfficeView({
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "8px 14px", background: "#0a0b16", borderBottom: "2px solid #1e2840",
-              flexShrink: 0, fontFamily: "'Press Start 2P', monospace",
+              flexShrink: 0, fontFamily: "'Silkscreen', 'SF Mono', monospace",
             }}>
               <span style={{ fontSize: 11, color: "#5a8cff", letterSpacing: 2 }}>CHAT</span>
               <button onClick={() => setChatOpen(false)} style={{
@@ -347,7 +347,7 @@ export const PixelOfficeView = memo(function PixelOfficeView({
               <div style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
                 justifyContent: "center", height: "60%", gap: 20,
-                fontFamily: "'Press Start 2P', monospace",
+                fontFamily: "'Silkscreen', 'SF Mono', monospace",
               }}>
                 <div style={{ fontSize: 56, opacity: 0.3 }}>🔮</div>
                 <div style={{ fontSize: isMobile ? 10 : 14, color: "#2a3a50" }}>NO SESSIONS FOUND</div>

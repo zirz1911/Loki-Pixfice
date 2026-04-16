@@ -16,12 +16,12 @@ export function PixelKey({ label, seq, dotColor, sendKey, title, accent, small }
       onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); sendKey(seq); }}
       title={title ?? label}
       style={{
-        padding: small ? "2px 5px" : "3px 8px",
+        padding: small ? "3px 8px" : "5px 12px",
         background: base,
         border: `1px solid ${borderBase}`,
         color: colorBase,
-        fontSize: small ? 6 : 7,
-        fontFamily: "'Press Start 2P', monospace",
+        fontSize: small ? 8 : 9,
+        fontFamily: "'Silkscreen', 'SF Mono', monospace",
         cursor: "pointer",
         boxShadow: "2px 2px 0 #000",
         userSelect: "none",

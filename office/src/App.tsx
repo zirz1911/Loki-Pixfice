@@ -2,13 +2,13 @@ import { useState, useCallback, useEffect } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useSessions } from "./hooks/useSessions";
 import { useMessages } from "./hooks/useMessages";
-import { PixelOfficeView } from "./components/PixelOfficeView";
-import { StatusBar } from "./components/StatusBar";
+import { Shell } from "./components/Shell";
 import { TerminalModal } from "./components/TerminalModal";
-import { ShortcutOverlay } from "./components/ShortcutOverlay";
-import { JumpOverlay } from "./components/JumpOverlay";
+import { RoomsView } from "./components/RoomsView";
 import { OverviewGrid } from "./components/OverviewGrid";
 import { FleetGrid } from "./components/FleetGrid";
+import { ShortcutOverlay } from "./components/ShortcutOverlay";
+import { JumpOverlay } from "./components/JumpOverlay";
 import { WorktreeView } from "./components/WorktreeView";
 import type { AgentState } from "./lib/types";
 
@@ -28,17 +28,19 @@ export function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showJump, setShowJump] = useState(false);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setShowJump(false); return; }
-      if (e.key === "?" && !(e.target instanceof HTMLInputElement)) { setShowShortcuts(true); return; }
+      if (e.key === "Escape")                                                       { setShowJump(false); return; }
+      if (e.key === "?" && !(e.target instanceof HTMLInputElement))                 { setShowShortcuts(true); return; }
       if ((e.key === "j" || e.key === "J") && !(e.target instanceof HTMLInputElement) && !e.ctrlKey && !e.metaKey) { setShowJump(true); return; }
-      if (e.key === "k" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); setShowJump(true); return; }
+      if (e.key === "k" && (e.ctrlKey || e.metaKey))                               { e.preventDefault(); setShowJump(true); return; }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Triple-tap opens shortcuts on mobile
   useEffect(() => {
     let tapCount = 0;
     let tapTimer: ReturnType<typeof setTimeout>;
@@ -54,7 +56,7 @@ export function App() {
 
   const { sessions, agents, eventLog, addEvent, handleMessage, feedActive, agentFeedLog } = useSessions();
   const { connected, send } = useWebSocket(handleMessage);
-  const { msgs } = useMessages(agents);
+  useMessages(agents); // keep alive for chat panel if needed
 
   const onSelectAgent = useCallback((agent: AgentState) => {
     setSelectedAgent(agent);
@@ -73,88 +75,80 @@ export function App() {
     send({ type: "select", target: next.target });
   }, [selectedAgent, siblings, send]);
 
-  const terminalModal = selectedAgent && (
-    <TerminalModal
-      agent={selectedAgent}
-      send={send}
-      onClose={() => setSelectedAgent(null)}
-      onNavigate={onNavigate}
-      onSelectSibling={onSelectAgent}
-      siblings={siblings}
-    />
-  );
-
-  const shortcutOverlay = showShortcuts && (
-    <ShortcutOverlay onClose={() => setShowShortcuts(false)} />
-  );
-
-  const jumpOverlay = showJump && (
-    <JumpOverlay
-      agents={agents}
-      onSelect={(agent) => { onSelectAgent(agent); setShowJump(false); }}
-      onClose={() => setShowJump(false)}
-    />
-  );
-
-  if (route === "office" || route === "") {
-    return (
-      <>
-        <PixelOfficeView
-          sessions={sessions}
-          agents={agents}
-          msgs={msgs}
-          connected={connected}
-          send={send}
-          onSelectAgent={onSelectAgent}
-        />
-        {terminalModal}
-        {shortcutOverlay}
-        {jumpOverlay}
-      </>
-    );
-  }
-
+  // Route → main content
+  let mainContent: React.ReactNode;
   if (route === "overview") {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", background: "#0a0a12", overflow: "hidden" }}>
-        <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="overview" onJump={() => setShowJump(true)} />
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          <OverviewGrid sessions={sessions} agents={agents} connected={connected} send={send} onSelectAgent={onSelectAgent} />
-        </div>
-        {terminalModal}{jumpOverlay}{shortcutOverlay}
-      </div>
+    mainContent = (
+      <OverviewGrid
+        sessions={sessions}
+        agents={agents}
+        connected={connected}
+        send={send}
+        onSelectAgent={onSelectAgent}
+      />
+    );
+  } else if (route === "fleet") {
+    mainContent = (
+      <FleetGrid
+        sessions={sessions}
+        agents={agents}
+        connected={connected}
+        send={send}
+        onSelectAgent={onSelectAgent}
+        eventLog={eventLog}
+        addEvent={addEvent}
+        feedActive={feedActive}
+        agentFeedLog={agentFeedLog}
+      />
+    );
+  } else if (route === "worktree") {
+    mainContent = (
+      <WorktreeView accentColor="oklch(0.85 0.20 142)" maxHeight="none" />
+    );
+  } else {
+    mainContent = (
+      <RoomsView
+        sessions={sessions}
+        agents={agents}
+        onSelectAgent={onSelectAgent}
+      />
     );
   }
 
-  if (route === "fleet") {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", background: "#0a0a12", overflow: "hidden" }}>
-        <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="fleet" onJump={() => setShowJump(true)} />
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          <FleetGrid
-            sessions={sessions} agents={agents}
-            connected={connected} send={send} onSelectAgent={onSelectAgent}
-            eventLog={eventLog} addEvent={addEvent}
-            feedActive={feedActive} agentFeedLog={agentFeedLog}
-          />
-        </div>
-        {terminalModal}{jumpOverlay}{shortcutOverlay}
-      </div>
-    );
-  }
+  return (
+    <>
+      <Shell
+        route={route}
+        agents={agents}
+        sessions={sessions}
+        connected={connected}
+        selectedAgent={selectedAgent}
+        onSelectAgent={onSelectAgent}
+        onJump={() => setShowJump(true)}
+      >
+        {mainContent}
+      </Shell>
 
-  if (route === "worktree") {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", background: "#0a0a12", overflow: "hidden" }}>
-        <StatusBar connected={connected} agentCount={agents.length} sessionCount={sessions.length} activeView="worktree" onJump={() => setShowJump(true)} />
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
-          <WorktreeView accentColor="#5a8cff" maxHeight="none" />
-        </div>
-        {terminalModal}{jumpOverlay}{shortcutOverlay}
-      </div>
-    );
-  }
+      {selectedAgent && (
+        <TerminalModal
+          agent={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+          onNavigate={onNavigate}
+          siblings={siblings}
+          onSelectSibling={onSelectAgent}
+        />
+      )}
 
-  window.location.hash = "office";
-  return null;
+      {showShortcuts && (
+        <ShortcutOverlay onClose={() => setShowShortcuts(false)} />
+      )}
+      {showJump && (
+        <JumpOverlay
+          agents={agents}
+          onSelect={(agent) => { onSelectAgent(agent); setShowJump(false); }}
+          onClose={() => setShowJump(false)}
+        />
+      )}
+    </>
+  );
 }

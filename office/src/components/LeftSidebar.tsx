@@ -42,7 +42,7 @@ function DeptStatus({ session, agents, idx }: DeptStatusProps) {
         />
         <span
           style={{
-            fontSize: 6, fontFamily: "'Press Start 2P', monospace",
+            fontSize: 6, fontFamily: "'Silkscreen', 'SF Mono', monospace",
             color: style.accent,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             maxWidth: 42,
@@ -51,7 +51,7 @@ function DeptStatus({ session, agents, idx }: DeptStatusProps) {
         >
           {style.label.slice(0, 6)}
         </span>
-        <span style={{ marginLeft: "auto", fontSize: 6, fontFamily: "'Press Start 2P', monospace", color: "#445566" }}>
+        <span style={{ marginLeft: "auto", fontSize: 6, fontFamily: "'Silkscreen', 'SF Mono', monospace", color: "#445566" }}>
           {busy}/{total}
         </span>
       </div>
@@ -91,7 +91,7 @@ export const LeftSidebar = memo(function LeftSidebar({ sessions, agents, activeV
         flexDirection: "column",
         height: "100%",
         overflow: "hidden",
-        fontFamily: "'Press Start 2P', monospace",
+        fontFamily: "'Silkscreen', 'SF Mono', monospace",
         imageRendering: "pixelated",
       }}
     >
@@ -171,12 +171,12 @@ export const LeftSidebar = memo(function LeftSidebar({ sessions, agents, activeV
         >
           <div
             style={{
-              width: 8, height: 8, background: totalBusy > 0 ? "#fdd835" : "#2a3a50",
+              width: 8, height: 8, background: totalBusy > 0 ? "oklch(0.85 0.20 142)" : "#2a3a50",
               margin: "0 auto",
               animation: totalBusy > 0 ? "agent-pulse 0.8s infinite" : "none",
             }}
           />
-          <div style={{ fontSize: 7, color: totalBusy > 0 ? "#fdd835" : "#2a3a50", marginTop: 2 }}>
+          <div style={{ fontSize: 7, color: totalBusy > 0 ? "oklch(0.85 0.20 142)" : "#2a3a50", marginTop: 2 }}>
             {totalBusy}
           </div>
         </div>

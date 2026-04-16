@@ -98,7 +98,9 @@ function XTerminal({ target, onAttached, onExit, style }, ref) {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: "pty-attach", target }));
+      // Fit first so cols/rows reflect actual container size before attaching
+      fit.fit();
+      ws.send(JSON.stringify({ type: "pty-attach", target, cols: term.cols, rows: term.rows }));
     };
 
     ws.onmessage = (e) => {

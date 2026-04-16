@@ -114,8 +114,8 @@ export const MiniMonitor = memo(function MiniMonitor({
       <div style={{
         position: "absolute", top: 3, right: 3, zIndex: 20,
         width: 5, height: 5, borderRadius: "50%",
-        background: isActive ? "#4caf50" : isStale ? "#ffa726" : "#333",
-        boxShadow: isActive ? "0 0 6px #4caf50, 0 0 2px #4caf50" : isStale ? "0 0 4px #ffa726" : "none",
+        background: isActive ? "#22d3ee" : isStale ? "oklch(0.85 0.20 142)" : "#333",
+        boxShadow: isActive ? "0 0 6px #22d3ee, 0 0 2px #22d3ee" : isStale ? "0 0 4px oklch(0.85 0.20 142)" : "none",
         transition: "all 0.5s",
         animation: isActive ? "agent-pulse 1s ease-in-out infinite" : "none",
       }} />

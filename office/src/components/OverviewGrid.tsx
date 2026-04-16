@@ -36,7 +36,7 @@ const OverviewTile = memo(function OverviewTile({
 
   const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ");
   const isBusy = agent.status === "busy";
-  const statusColor = isBusy ? "#ffa726" : agent.status === "ready" ? "#22C55E" : "#555";
+  const statusColor = isBusy ? "oklch(0.85 0.20 142)" : agent.status === "ready" ? "#22d3ee" : "#555";
 
   // IntersectionObserver — only poll when visible
   const [visible, setVisible] = useState(false);
@@ -107,7 +107,7 @@ const OverviewTile = memo(function OverviewTile({
         }} />
         <span style={{
           fontSize: 10, fontWeight: "bold", letterSpacing: 1,
-          color: accent, fontFamily: "'Press Start 2P', monospace",
+          color: accent, fontFamily: "'Silkscreen', 'SF Mono', monospace",
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           flex: 1,
         }}>
@@ -129,7 +129,7 @@ const OverviewTile = memo(function OverviewTile({
         <span style={{
           fontSize: 8, fontFamily: "monospace",
           padding: "2px 6px", borderRadius: 4, flexShrink: 0,
-          background: isBusy ? "#ffa72618" : agent.status === "ready" ? "#22C55E14" : "rgba(255,255,255,0.04)",
+          background: isBusy ? "oklch(0.85 0.20 142)18" : agent.status === "ready" ? "#22d3ee14" : "rgba(255,255,255,0.04)",
           color: statusColor,
         }}>
           {agent.status}
@@ -196,7 +196,7 @@ export const OverviewGrid = memo(function OverviewGrid({
   }, [agents]);
 
   return (
-    <div style={{ width: "100%", minHeight: "100%", background: "#0a0a12", overflowY: "auto" }}>
+    <div style={{ width: "100%", minHeight: "100%", background: "#0d0d0d", overflowY: "auto" }}>
       {/* Summary bar */}
       <div style={{
         maxWidth: 1600, margin: "0 auto",
@@ -205,25 +205,25 @@ export const OverviewGrid = memo(function OverviewGrid({
         borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, fontFamily: "monospace", fontSize: 12 }}>
-          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 9, letterSpacing: 4, fontFamily: "'Press Start 2P', monospace" }}>
+          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 9, letterSpacing: 4, fontFamily: "'Silkscreen', 'SF Mono', monospace" }}>
             OVERVIEW
           </span>
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{sessionGroups.length} rooms</span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{agents.length} agents</span>
           {!isMobile && <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>}
-          {!isMobile && <span style={{ color: fps >= 50 ? "#4caf50" : fps >= 30 ? "#ffa726" : "#ef5350" }}>{fps} fps</span>}
+          {!isMobile && <span style={{ color: fps >= 50 ? "#22d3ee" : fps >= 30 ? "oklch(0.85 0.20 142)" : "#ef5350" }}>{fps} fps</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 20, fontFamily: "monospace", fontSize: 12 }}>
           {busyCount > 0 && (
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ffa726", boxShadow: "0 0 8px #ffa726", animation: "agent-pulse 1s infinite" }} />
-              <span style={{ color: "#ffa726" }}>{busyCount} busy</span>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "oklch(0.85 0.20 142)", boxShadow: "0 0 8px oklch(0.85 0.20 142)", animation: "agent-pulse 1s infinite" }} />
+              <span style={{ color: "oklch(0.85 0.20 142)" }}>{busyCount} busy</span>
             </span>
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4caf50", boxShadow: "0 0 4px #4caf50" }} />
-            <span style={{ color: "#4caf50" }}>{readyCount} ready</span>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22d3ee", boxShadow: "0 0 4px #22d3ee" }} />
+            <span style={{ color: "#22d3ee" }}>{readyCount} ready</span>
           </span>
           {!isMobile && idleCount > 0 && (
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -231,7 +231,7 @@ export const OverviewGrid = memo(function OverviewGrid({
               <span style={{ color: "rgba(255,255,255,0.3)" }}>{idleCount} idle</span>
             </span>
           )}
-          {!isMobile && <span style={{ fontSize: 8, color: "rgba(255,255,255,0.15)", fontFamily: "'Press Start 2P', monospace" }}>J → JUMP</span>}
+          {!isMobile && <span style={{ fontSize: 8, color: "rgba(255,255,255,0.15)", fontFamily: "'Silkscreen', 'SF Mono', monospace" }}>J → JUMP</span>}
         </div>
       </div>
 
@@ -257,12 +257,12 @@ export const OverviewGrid = memo(function OverviewGrid({
                 </kbd>
                 <span style={{
                   width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
-                  background: hasBusy ? "#ffa726" : "#22C55E",
-                  boxShadow: hasBusy ? "0 0 8px #ffa726" : "0 0 4px #22C55E",
+                  background: hasBusy ? "oklch(0.85 0.20 142)" : "#22d3ee",
+                  boxShadow: hasBusy ? "0 0 8px oklch(0.85 0.20 142)" : "0 0 4px #22d3ee",
                 }} />
                 <h3 style={{
                   fontSize: 10, fontWeight: "bold", letterSpacing: 3,
-                  color: accent, fontFamily: "'Press Start 2P', monospace",
+                  color: accent, fontFamily: "'Silkscreen', 'SF Mono', monospace",
                   textTransform: "uppercase", margin: 0,
                 }}>
                   {displayLabel}

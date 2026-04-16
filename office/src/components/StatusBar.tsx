@@ -49,7 +49,7 @@ export const StatusBar = memo(function StatusBar({
           display: "flex",
           alignItems: "center",
           gap: isMobile ? 10 : 18,
-          fontFamily: "'Press Start 2P', monospace",
+          fontFamily: "'Silkscreen', 'SF Mono', monospace",
           imageRendering: "pixelated",
         }}
       >
@@ -94,7 +94,7 @@ export const StatusBar = memo(function StatusBar({
             style={{
               padding: "6px 12px", borderRadius: 6,
               fontSize: 9, cursor: "pointer",
-              fontFamily: "'Press Start 2P', monospace",
+              fontFamily: "'Silkscreen', 'SF Mono', monospace",
               background: "rgba(90,140,255,0.15)",
               color: "#5a8cff",
               border: "1px solid rgba(90,140,255,0.25)",
@@ -115,7 +115,7 @@ export const StatusBar = memo(function StatusBar({
                   href={item.href}
                   style={{
                     fontSize: 10,
-                    fontFamily: "'Press Start 2P', monospace",
+                    fontFamily: "'Silkscreen', 'SF Mono', monospace",
                     color: activeView === item.id ? "#5a8cff" : "#5a6a80",
                     textDecoration: "none",
                     borderBottom: activeView === item.id ? "2px solid #5a8cff" : "2px solid transparent",
@@ -136,11 +136,11 @@ export const StatusBar = memo(function StatusBar({
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           <div style={{
             width: 8, height: 8,
-            background: connected ? "#4caf50" : "#ff6b6b",
+            background: connected ? "#22d3ee" : "#ff6b6b",
             animation: connected ? "pixel-glow 2s ease-in-out infinite" : "agent-pulse 0.8s ease-in-out infinite",
           }} />
           {!isMobile && (
-            <span style={{ fontSize: 9, color: connected ? "#4caf50" : "#ff6b6b" }}>
+            <span style={{ fontSize: 9, color: connected ? "#22d3ee" : "#ff6b6b" }}>
               {connected ? "LIVE" : "DISC"}
             </span>
           )}
@@ -194,7 +194,7 @@ export const StatusBar = memo(function StatusBar({
                   gap: 12,
                   padding: "14px 20px",
                   textDecoration: "none",
-                  fontFamily: "'Press Start 2P', monospace",
+                  fontFamily: "'Silkscreen', 'SF Mono', monospace",
                   fontSize: 10,
                   color: active ? "#5a8cff" : "#5a6a80",
                   background: active ? "#5a8cff10" : "transparent",
@@ -210,7 +210,7 @@ export const StatusBar = memo(function StatusBar({
           {/* Stats row in dropdown */}
           <div style={{
             display: "flex", gap: 20, padding: "10px 20px",
-            fontFamily: "'Press Start 2P', monospace",
+            fontFamily: "'Silkscreen', 'SF Mono', monospace",
             borderTop: "1px solid #1e2840",
           }}>
             <span style={{ fontSize: 8, color: "#445566" }}>
@@ -223,7 +223,7 @@ export const StatusBar = memo(function StatusBar({
               <button onClick={() => { setMenuOpen(false); onJump(); }} style={{
                 marginLeft: "auto", background: "rgba(90,140,255,0.15)",
                 border: "1px solid rgba(90,140,255,0.25)", color: "#5a8cff",
-                fontSize: 8, fontFamily: "'Press Start 2P', monospace",
+                fontSize: 8, fontFamily: "'Silkscreen', 'SF Mono', monospace",
                 padding: "4px 10px", cursor: "pointer",
               }}>⌘J JUMP</button>
             )}

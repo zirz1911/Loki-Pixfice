@@ -55,8 +55,8 @@ export const AgentRow = memo(function AgentRow({
     }, 400);
   }, [text, agent, accent, roomLabel, send, onSendDone]);
 
-  const statusColor = isBusy ? "#ffa726" : agent.status === "ready" ? "#22C55E" : "#94A3B8";
-  const statusBg = isBusy ? "#ffa72620" : agent.status === "ready" ? "#22C55E18" : "rgba(255,255,255,0.06)";
+  const statusColor = isBusy ? "oklch(0.85 0.20 142)" : agent.status === "ready" ? "#22d3ee" : "#94A3B8";
+  const statusBg = isBusy ? "oklch(0.85 0.20 142)20" : agent.status === "ready" ? "#22d3ee18" : "rgba(255,255,255,0.06)";
   const avatarSize = featured ? (isMobile ? 64 : 96) : (isMobile ? 40 : 56);
 
   return (
@@ -90,8 +90,8 @@ export const AgentRow = memo(function AgentRow({
         >
           <div style={{
             width: 20, height: 20,
-            background: isBusy ? "#fdd835" : agent.status === "ready" ? "#4caf50" : "#445566",
-            boxShadow: isBusy ? "0 0 8px #fdd835" : "none",
+            background: isBusy ? "oklch(0.85 0.20 142)" : agent.status === "ready" ? "#22d3ee" : "#445566",
+            boxShadow: isBusy ? "0 0 8px oklch(0.85 0.20 142)" : "none",
           }} />
         </div>
 
@@ -144,7 +144,7 @@ export const AgentRow = memo(function AgentRow({
                 return (
                   <span key={i} style={{
                     fontSize: 10, fontFamily: "monospace",
-                    color: "#fbbf24", opacity: i === 0 ? 0.8 : 0.4 - i * 0.1,
+                    color: "oklch(0.85 0.20 142)", opacity: i === 0 ? 0.8 : 0.4 - i * 0.1,
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   }}>
                     {entry.text} <span style={{ color: "rgba(255,255,255,0.12)" }}>{agoStr}</span>
@@ -214,7 +214,7 @@ export const AgentRow = memo(function AgentRow({
         {sent ? (
           <span style={{
             fontSize: 12, fontFamily: "monospace", padding: "8px 12px", borderRadius: 8,
-            background: "#22C55E20", color: "#22C55E",
+            background: "#22d3ee20", color: "#22d3ee",
           }}>✓</span>
         ) : (
           <button

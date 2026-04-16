@@ -10,7 +10,7 @@ interface AgentCardProps {
 export const AgentCard = memo(function AgentCard({ agent, accent, onClick }: AgentCardProps) {
   const [hovered, setHovered] = useState(false);
   const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ");
-  const dotColor = agent.status === "busy" ? "#fdd835" : agent.status === "ready" ? "#4caf50" : "#445566";
+  const dotColor = agent.status === "busy" ? "oklch(0.85 0.20 142)" : agent.status === "ready" ? "#22d3ee" : "#445566";
 
   return (
     <div
@@ -28,7 +28,7 @@ export const AgentCard = memo(function AgentCard({ agent, accent, onClick }: Age
 
       <span
         className="text-[7px] font-bold truncate max-w-[80px] text-center leading-tight mt-1"
-        style={{ color: accent, fontFamily: "'Press Start 2P', monospace" }}
+        style={{ color: accent, fontFamily: "'Silkscreen', 'SF Mono', monospace" }}
       >
         {displayName}
       </span>
@@ -40,7 +40,7 @@ export const AgentCard = memo(function AgentCard({ agent, accent, onClick }: Age
             background: "#1a1008",
             border: `4px solid ${accent}`,
             boxShadow: "4px 4px 0 0 rgba(0,0,0,0.8)",
-            fontFamily: "'Press Start 2P', monospace",
+            fontFamily: "'Silkscreen', 'SF Mono', monospace",
             imageRendering: "pixelated",
           }}
         >

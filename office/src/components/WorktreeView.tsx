@@ -69,7 +69,7 @@ export function WorktreeView({ accentColor = "#89b4fa", maxHeight = 280 }: Workt
         borderBottom: `1px solid ${borderColor}`,
         padding: "6px 12px",
         display: "flex", alignItems: "center", gap: 8,
-        fontFamily: "'Press Start 2P', monospace",
+        fontFamily: "'Silkscreen', 'SF Mono', monospace",
         fontSize: 8,
       }}>
         <span style={{ color: accentColor }}>WORKTREES</span>

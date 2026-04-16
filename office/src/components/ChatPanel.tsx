@@ -25,8 +25,8 @@ interface ChatPanelProps {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  busy: "#fdd835",
-  ready: "#4caf50",
+  busy: "oklch(0.85 0.20 142)",
+  ready: "#22d3ee",
   idle: "#445566",
 };
 
@@ -82,7 +82,7 @@ function AgentPills({
                 : `1px solid ${selected ? color + "80" : "#2a3a50"}`,
               color: selected ? color : loki ? color + "99" : "#445566",
               fontSize: loki ? 9 : 8,
-              fontFamily: "'Press Start 2P', monospace",
+              fontFamily: "'Silkscreen', 'SF Mono', monospace",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -139,7 +139,7 @@ function AssistantBubble({ msg }: { msg: ChatMsg }) {
       <span
         style={{
           fontSize: 8,
-          fontFamily: "'Press Start 2P', monospace",
+          fontFamily: "'Silkscreen', 'SF Mono', monospace",
           color,
           opacity: 0.8,
         }}
@@ -189,7 +189,7 @@ function LokkijBubble({ msg }: { msg: ChatMsg }) {
       <span
         style={{
           fontSize: 8,
-          fontFamily: "'Press Start 2P', monospace",
+          fontFamily: "'Silkscreen', 'SF Mono', monospace",
           color: "#22d3ee",
           opacity: 0.7,
         }}
@@ -322,7 +322,7 @@ export const ChatPanel = memo(function ChatPanel({
         flexDirection: "column",
         height: "100%",
         overflow: "hidden",
-        fontFamily: "'Press Start 2P', monospace",
+        fontFamily: "'Silkscreen', 'SF Mono', monospace",
       }}
     >
       {/* Header — hidden on mobile since overlay already provides one */}
@@ -342,7 +342,7 @@ export const ChatPanel = memo(function ChatPanel({
             style={{
               width: 6,
               height: 6,
-              background: connected ? "#4caf50" : "#ff6b6b",
+              background: connected ? "#22d3ee" : "#ff6b6b",
               animation: connected ? "pixel-glow 2s infinite" : "agent-pulse 0.8s infinite",
               flexShrink: 0,
             }}
@@ -400,7 +400,7 @@ export const ChatPanel = memo(function ChatPanel({
         <span
           style={{
             fontSize: 8,
-            fontFamily: "'Press Start 2P', monospace",
+            fontFamily: "'Silkscreen', 'SF Mono', monospace",
             color: "#22d3ee",
             flexShrink: 0,
             paddingBottom: 2,
@@ -474,7 +474,7 @@ export const ChatPanel = memo(function ChatPanel({
             border: "none",
             color: "#07080f",
             fontSize: 8,
-            fontFamily: "'Press Start 2P', monospace",
+            fontFamily: "'Silkscreen', 'SF Mono', monospace",
             cursor: "pointer",
             flexShrink: 0,
             opacity: uploading ? 0.5 : 1,

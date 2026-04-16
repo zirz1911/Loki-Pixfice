@@ -77,7 +77,7 @@ export const JumpOverlay = memo(function JumpOverlay({
         borderRadius: 12,
         boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
         overflow: "hidden",
-        fontFamily: "'Press Start 2P', monospace",
+        fontFamily: "'Silkscreen', 'SF Mono', monospace",
       }}>
         {/* Search input */}
         <div style={{
@@ -117,7 +117,7 @@ export const JumpOverlay = memo(function JumpOverlay({
           {filtered.map((agent, i) => {
             const style = roomStyle(agent.session);
             const displayName = agent.name.replace(/-oracle$/, "").replace(/-/g, " ");
-            const statusColor = agent.status === "busy" ? "#ffa726" : agent.status === "ready" ? "#22C55E" : "#555";
+            const statusColor = agent.status === "busy" ? "oklch(0.85 0.20 142)" : agent.status === "ready" ? "#22d3ee" : "#555";
             const isSelected = i === selectedIdx;
             return (
               <div
@@ -158,7 +158,7 @@ export const JumpOverlay = memo(function JumpOverlay({
                 <span style={{
                   fontSize: 8, fontFamily: "monospace",
                   padding: "2px 6px", borderRadius: 4,
-                  background: agent.status === "busy" ? "#ffa72618" : agent.status === "ready" ? "#22C55E14" : "rgba(255,255,255,0.04)",
+                  background: agent.status === "busy" ? "oklch(0.85 0.20 142)18" : agent.status === "ready" ? "#22d3ee14" : "rgba(255,255,255,0.04)",
                   color: statusColor,
                 }}>
                   {agent.status}

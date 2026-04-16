@@ -10,7 +10,7 @@ export const BottomStats = memo(function BottomStats({ agents }: BottomStatsProp
   const readyCount = agents.filter((a) => a.status === "ready").length;
   const idleCount = agents.filter((a) => a.status === "idle").length;
   const busyPct = Math.min(100, (busyCount / Math.max(1, agents.length)) * 100);
-  const barColor = busyCount > 5 ? "#ef5350" : busyCount > 2 ? "#fdd835" : "#4caf50";
+  const barColor = busyCount > 5 ? "#ef5350" : busyCount > 2 ? "oklch(0.85 0.20 142)" : "#22d3ee";
 
   return (
     <div style={{
@@ -21,13 +21,13 @@ export const BottomStats = memo(function BottomStats({ agents }: BottomStatsProp
       border: "1px solid rgba(255,255,255,0.04)",
     }}>
       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#fdd835" }} />
-        <strong style={{ color: "#fdd835", fontSize: 12 }}>{busyCount}</strong>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "oklch(0.85 0.20 142)" }} />
+        <strong style={{ color: "oklch(0.85 0.20 142)", fontSize: 12 }}>{busyCount}</strong>
         <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>busy</span>
       </span>
       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4caf50" }} />
-        <strong style={{ color: "#4caf50", fontSize: 12 }}>{readyCount}</strong>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22d3ee" }} />
+        <strong style={{ color: "#22d3ee", fontSize: 12 }}>{readyCount}</strong>
         <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>ready</span>
       </span>
       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>

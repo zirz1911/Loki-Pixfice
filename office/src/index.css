@@ -1,65 +1,63 @@
 @import "tailwindcss";
 
+/* ── Paji-Exo Theme — terminal green on near-black ── */
 :root {
-  --px-bg:        #1e1e2e;
-  --px-bg-mid:    #16202e;
-  --px-floor1:    #3a2418;
-  --px-floor2:    #2e1c12;
-  --px-wall:      #16202e;
-  --px-accent:    #5a8cff;
-  --px-success:   #5ac88c;
-  --px-warn:      #fdd835;
-  --px-danger:    #ff6b6b;
-  --px-text:      #e0e8ff;
-  --px-text-dim:  #6a7a9a;
-  --px-desk-dk:   #503814;
-  --px-desk-mid:  #7a5820;
-  --px-desk-lt:   #9a7030;
-  --px-chair-bk:  #1a2a3c;
-  --px-chair-st:  #2a3c54;
+  --exo-bg:       #0d0d0d;
+  --exo-panel:    #111111;
+  --exo-card:     #151515;
+  --exo-border:   #1e1e1e;
+  --exo-border2:  #252525;
+  --exo-green:    oklch(0.85 0.20 142);
+  --exo-text:     #cccccc;
+  --exo-text-mid: #666666;
+  --exo-text-dim: #333333;
+  --exo-ready:    #22d3ee;
+
+  /* keep px vars for any legacy component references */
+  --px-bg:       var(--exo-bg);
+  --px-bg-mid:   var(--exo-panel);
+  --px-accent:   var(--exo-green);
+  --px-success:  var(--exo-ready);
+  --px-warn:     var(--exo-green);
+  --px-danger:   #ff4444;
+  --px-text:     var(--exo-text);
+  --px-text-dim: var(--exo-text-mid);
 }
 
-* { image-rendering: pixelated; image-rendering: crisp-edges; }
+* {
+  box-sizing: border-box;
+}
 
 body {
-  background: var(--px-bg);
-  color: var(--px-text);
-  font-family: 'Press Start 2P', monospace;
+  background: var(--exo-bg);
+  color: var(--exo-text);
+  font-family: 'Silkscreen', 'SF Mono', 'Fira Code', monospace;
   overflow-x: hidden;
-  font-size: 8px;
-  line-height: 2;
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 0;
 }
 
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--px-bg-mid); }
-::-webkit-scrollbar-thumb { background: var(--px-accent); }
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #080808; }
+::-webkit-scrollbar-thumb { background: var(--exo-border2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.85 0.20 142 / 0.4); }
 
-/* Animations */
-@keyframes pixel-idle  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes pixel-bob   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes agent-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-@keyframes pixel-glow  { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
-@keyframes float-code {
+/* ── Animations ── */
+@keyframes agent-pulse  { 0%,100% { opacity: 1; }       50% { opacity: 0.35; } }
+@keyframes blink        { 50% { opacity: 0; } }
+@keyframes glowPulse    {
+  0%, 100% { box-shadow: 0 0 5px oklch(0.85 0.20 142 / 0.3); }
+  50%       { box-shadow: 0 0 15px oklch(0.85 0.20 142 / 0.6); }
+}
+@keyframes fadeSlideIn  { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes float-code   {
   0%   { opacity: 0; transform: translateY(0); }
   20%  { opacity: 0.9; }
   80%  { opacity: 0.9; }
   100% { opacity: 0; transform: translateY(-24px); }
 }
-@keyframes sparkle        { 0% { opacity: 0; transform: scale(0); } 50% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0); } }
-@keyframes saiyan-ring    { 0% { r: 20; opacity: 0.7; stroke-width: 3; } 100% { r: 90; opacity: 0; stroke-width: 0.5; } }
-@keyframes saiyan-aura    { 0% { r: 28; opacity: 0.5; } 50% { r: 40; opacity: 0.2; } 100% { r: 28; opacity: 0.5; } }
-@keyframes saiyan-outer   { 0% { r: 38; opacity: 0.3; } 50% { r: 52; opacity: 0.08; } 100% { r: 38; opacity: 0.3; } }
-@keyframes saiyan-glow    { 0% { r: 55; opacity: 0.25; } 20% { r: 65; opacity: 0.12; } 100% { r: 40; opacity: 0; } }
-@keyframes saiyan-particle { 0% { cy: 30; opacity: 1; r: 2.5; } 100% { cy: -90; opacity: 0; r: 0.5; } }
-@keyframes saiyan-pillar  {
-  0%   { opacity: 0.5; transform: scaleY(0); transform-origin: bottom; }
-  30%  { opacity: 0.25; transform: scaleY(1); }
-  100% { opacity: 0; transform: scaleY(1); }
-}
-@keyframes saiyanPulse    { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-@keyframes typing-arm     { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes room-pulse     { 0%,100% { stroke-opacity: 0.2; } 50% { stroke-opacity: 0.5; } }
-@keyframes blink          { 50% { opacity: 0; } }
-@keyframes pixel-twinkle  { 0%,100% { opacity: 0.15; } 50% { opacity: 1; } }
-@keyframes slideUp        { from { transform: translateY(100%); } to { transform: translateY(0); } }
-@keyframes fadeSlideIn    { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideUp      { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes pixel-idle   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes room-pulse   { 0%,100% { stroke-opacity: 0.2; } 50% { stroke-opacity: 0.5; } }

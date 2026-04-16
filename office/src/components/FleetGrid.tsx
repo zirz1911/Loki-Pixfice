@@ -188,7 +188,7 @@ export const FleetGrid = memo(function FleetGrid({
   }, [agents, busyAgents, recentMap]);
 
   return (
-    <div style={{ position: "relative", width: "100%", minHeight: "100vh", background: "#0a0a12" }}>
+    <div style={{ position: "relative", width: "100%", minHeight: "100vh", background: "#0d0d0d" }}>
       {/* Summary bar */}
       <div style={{
         maxWidth: isMobile ? "100%" : 800, margin: "0 auto",
@@ -197,23 +197,23 @@ export const FleetGrid = memo(function FleetGrid({
         borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, fontFamily: "monospace", fontSize: 14 }}>
-          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, letterSpacing: 4, fontFamily: "'Press Start 2P', monospace" }}>FLEET</span>
+          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, letterSpacing: 4, fontFamily: "'Silkscreen', 'SF Mono', monospace" }}>FLEET</span>
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{visualRooms.length} rooms</span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
           <span style={{ color: "rgba(255,255,255,0.6)" }}>{agents.length} agents</span>
           {!isMobile && <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>}
-          {!isMobile && <span style={{ color: fps >= 50 ? "#4caf50" : fps >= 30 ? "#ffa726" : "#ef5350" }}>{fps} fps</span>}
+          {!isMobile && <span style={{ color: fps >= 50 ? "#22d3ee" : fps >= 30 ? "oklch(0.85 0.20 142)" : "#ef5350" }}>{fps} fps</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 20, fontFamily: "monospace", fontSize: 14 }}>
           {busyCount > 0 && (
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#fbbf24", boxShadow: "0 0 8px #ffa726", animation: "agent-pulse 1s infinite" }} />
-              <span style={{ color: "#fbbf24" }}>{busyCount} busy</span>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "oklch(0.85 0.20 142)", boxShadow: "0 0 8px oklch(0.85 0.20 142)", animation: "agent-pulse 1s infinite" }} />
+              <span style={{ color: "oklch(0.85 0.20 142)" }}>{busyCount} busy</span>
             </span>
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4caf50", boxShadow: "0 0 4px #4caf50" }} />
-            <span style={{ color: "#4caf50" }}>{readyCount} ready</span>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22d3ee", boxShadow: "0 0 4px #22d3ee" }} />
+            <span style={{ color: "#22d3ee" }}>{readyCount} ready</span>
           </span>
           {idleCount > 0 && (
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -229,7 +229,7 @@ export const FleetGrid = memo(function FleetGrid({
                   style={{
                     padding: "4px 12px", fontSize: 10, fontFamily: "monospace", cursor: "pointer", border: "none",
                     background: sortMode === "active" ? "rgba(251,191,36,0.15)" : "transparent",
-                    color: sortMode === "active" ? "#fbbf24" : "#64748B",
+                    color: sortMode === "active" ? "oklch(0.85 0.20 142)" : "#64748B",
                     transition: "background 0.15s, color 0.15s",
                   }}
                   onClick={() => setSortMode("active")}>Active first</button>
@@ -276,14 +276,14 @@ export const FleetGrid = memo(function FleetGrid({
             role="button" tabIndex={0}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCollapsed("_recent"); } }}
           >
-            <div style={{ width: 12, height: 12, borderRadius: "50%", flexShrink: 0, background: "#fbbf24", boxShadow: "0 0 6px #fbbf24" }} />
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: "bold", letterSpacing: 4, textTransform: "uppercase", color: "#fbbf24", fontFamily: "'Press Start 2P', monospace" }}>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", flexShrink: 0, background: "oklch(0.85 0.20 142)", boxShadow: "0 0 6px oklch(0.85 0.20 142)" }} />
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: "bold", letterSpacing: 4, textTransform: "uppercase", color: "oklch(0.85 0.20 142)", fontFamily: "'Silkscreen', 'SF Mono', monospace" }}>
               Recently Active
             </h3>
             <span style={{
               fontSize: 12, fontFamily: "monospace", fontWeight: "bold",
               padding: "4px 10px", borderRadius: 6,
-              background: "rgba(251,191,36,0.15)", color: "#fbbf24",
+              background: "rgba(251,191,36,0.15)", color: "oklch(0.85 0.20 142)",
             }}>
               {recentlyActive.length}
             </span>
@@ -292,7 +292,7 @@ export const FleetGrid = memo(function FleetGrid({
               transform: isCollapsed("_recent") ? "rotate(-90deg)" : "rotate(0deg)",
               transition: "transform 0.2s",
             }}>
-              <path d="M4 6l4 4 4-4" stroke="#fbbf24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.5} />
+              <path d="M4 6l4 4 4-4" stroke="oklch(0.85 0.20 142)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.5} />
             </svg>
           </div>
           {!isCollapsed("_recent") && <div style={{ height: 1, background: "rgba(251,191,36,0.12)" }} />}
@@ -350,14 +350,14 @@ export const FleetGrid = memo(function FleetGrid({
             >
               <div style={{
                 width: 12, height: 12, borderRadius: "50%", flexShrink: 0,
-                background: vr.hasBusy ? "#ffa726" : "#22C55E",
-                boxShadow: vr.hasBusy ? "0 0 10px #ffa726" : "0 0 6px #22C55E",
+                background: vr.hasBusy ? "oklch(0.85 0.20 142)" : "#22d3ee",
+                boxShadow: vr.hasBusy ? "0 0 10px oklch(0.85 0.20 142)" : "0 0 6px #22d3ee",
               }} />
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <h3 style={{
                   margin: 0, fontSize: 14, fontWeight: "bold", letterSpacing: 4,
                   textTransform: "uppercase", color: vr.accent,
-                  fontFamily: "'Press Start 2P', monospace",
+                  fontFamily: "'Silkscreen', 'SF Mono', monospace",
                 }}>
                   {vr.label}
                 </h3>
@@ -378,7 +378,7 @@ export const FleetGrid = memo(function FleetGrid({
                 <span style={{
                   fontSize: 12, fontFamily: "monospace", fontWeight: "bold",
                   padding: "4px 10px", borderRadius: 6,
-                  background: "rgba(251,191,36,0.15)", color: "#fbbf24",
+                  background: "rgba(251,191,36,0.15)", color: "oklch(0.85 0.20 142)",
                 }}>
                   {vr.busyCount} busy
                 </span>
