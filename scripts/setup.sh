@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Loki-Pixfice — tmux session setup
-# Creates: loki-oracle (7 agent windows, each split 70/30) + loki-pixfice (server)
+# Creates: loki-kvasir (agent windows, each split 70/30) + loki-pixfice (server)
 #
 # Pane layout per agent window:
 #   ┌─────────────────────┐
@@ -12,30 +12,30 @@
 set -e
 
 BUN=/home/paji/.bun/bin/bun
-ORACLE_DIR=/home/paji/Loki-Oracle
-FREYR_DIR=/home/paji/Freyr-Oracle
+KVASIR_DIR=/home/paji/Loki-Kvasir
+FREYR_DIR=/home/paji/Freyr-Kvasir
 GEMINI_DIR=/home/paji/Loki-Gemini
 OFFICE_DIR=/home/paji/Project/Loki-Pixfice
 
 # ── Agent definitions: name | work_dir | command ─────────────────────────────
 # Format: "name:workdir:command"
 AGENTS=(
-  "odin:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "loki:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "thor:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "huginn:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "heimdall:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "tyr:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
-  "ymir:$ORACLE_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "odin:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "loki:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "thor:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "huginn:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "heimdall:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "tyr:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
+  "ymir:$KVASIR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
   "loki-gemini:$GEMINI_DIR:gemini --yolo"
   "freyr:$FREYR_DIR:unset CLAUDECODE && claude --dangerously-skip-permissions"
 )
 
-echo "Setting up Loki-Oracle tmux sessions..."
+echo "Setting up Loki-Kvasir tmux sessions..."
 
-# ── loki-oracle session ──────────────────────────────────────────────────────
-if tmux has-session -t loki-oracle 2>/dev/null; then
-  echo "  loki-oracle session already exists — skipping"
+# ── loki-kvasir session ──────────────────────────────────────────────────────
+if tmux has-session -t loki-kvasir 2>/dev/null; then
+  echo "  loki-kvasir session already exists — skipping"
 else
   FIRST=1
   for entry in "${AGENTS[@]}"; do
@@ -43,27 +43,27 @@ else
 
     if [[ $FIRST -eq 1 ]]; then
       # First window: create session
-      tmux new-session -d -s loki-oracle -n "$name" -c "$workdir"
+      tmux new-session -d -s loki-kvasir -n "$name" -c "$workdir"
       FIRST=0
     else
-      tmux new-window -t loki-oracle -n "$name" -c "$workdir"
+      tmux new-window -t loki-kvasir -n "$name" -c "$workdir"
     fi
 
     # Split: bottom shell pane (~10 lines)
-    tmux split-window -v -l 10 -t "loki-oracle:$name" -c "$workdir"
+    tmux split-window -v -l 10 -t "loki-kvasir:$name" -c "$workdir"
 
     # Launch agent in top pane (pane 0)
-    tmux send-keys -t "loki-oracle:${name}.0" "$cmd" Enter
+    tmux send-keys -t "loki-kvasir:${name}.0" "$cmd" Enter
 
     # Bottom pane (pane 1) stays as plain shell — select it
-    tmux select-pane -t "loki-oracle:${name}.0"
+    tmux select-pane -t "loki-kvasir:${name}.0"
   done
 
   # Focus odin
-  tmux select-window -t loki-oracle:odin
+  tmux select-window -t loki-kvasir:odin
 
   NAMES=$(printf '%s ' "${AGENTS[@]}" | tr ':' ' ' | awk '{print $1}' | tr '\n' ' ')
-  echo "  loki-oracle: $NAMES"
+  echo "  loki-kvasir: $NAMES"
   echo "  each window: pane 0 = agent CLI, pane 1 = shell"
 fi
 
@@ -73,12 +73,12 @@ if tmux has-session -t loki-pixfice 2>/dev/null; then
 else
   tmux new-session -d -s loki-pixfice -n server -c "$OFFICE_DIR"
   tmux send-keys -t loki-pixfice:server "MAW_HOST=local $BUN src/server.ts" Enter
-  echo "  loki-pixfice: server -> http://localhost:3456/office"
+  echo "  loki-pixfice: server -> http://localhost:3456"
 fi
 
 echo ""
 echo "Done! (${#AGENTS[@]} agents)"
 echo ""
-echo "  Office UI  ->  http://localhost:3456/office"
-echo "  Sessions   ->  tmux attach -t loki-oracle"
+echo "  Office UI  ->  http://localhost:3456"
+echo "  Sessions   ->  tmux attach -t loki-kvasir"
 echo "              ->  tmux attach -t loki-pixfice"

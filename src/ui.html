@@ -184,6 +184,8 @@
     border-left: 3px solid transparent; margin: 1px 0;
     font-family: 'Press Start 2P', monospace;
     transition: background 0.1s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(90, 140, 255, 0.2);
   }
   .window:hover { background: #0e1020; border-left-color: #2a3a50; }
   .window.selected { background: #101828; border-left-color: #5a8cff; }
@@ -314,6 +316,10 @@
 <div class="container">
   <div class="sidebar" id="sidebar"></div>
   <div class="term" id="term" tabindex="0">
+    <!-- Hidden input: triggers soft keyboard on mobile -->
+    <input id="mobileInput" type="text" inputmode="text"
+      autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+      style="position:absolute;width:1px;height:1px;opacity:0;top:0;left:0;border:0;padding:0;font-size:16px;pointer-events:none;">
     <div class="term-output" id="output"><div class="placeholder">select a window &larr;</div></div>
     <div class="term-input-line empty" id="inputLine">
       <span class="prompt">&gt;</span>
@@ -480,7 +486,7 @@ function renderSidebar(sessions) {
         <span class="idx">${w.index}</span><span class="name">${esc(w.name)}</span>
         <span class="dot ${w.active?'active':''}"></span></div>`;
     }).join('')}</div>`).join('');
-  sb.querySelectorAll('.window').forEach(e => e.addEventListener('click', () => selectWindow(e.dataset.target, e.dataset.name)));
+  // click handled by delegated listener on #sidebar (survives innerHTML replacement)
 }
 
 function selectWindow(target, name) {
@@ -494,7 +500,7 @@ function selectWindow(target, name) {
     ws.send(JSON.stringify({ type: 'subscribe', target }));
     ws.send(JSON.stringify({ type: 'select', target }));
   }
-  el('term').focus();
+  if (!isMobile) el('term').focus(); // mobile: ไม่ focus อัตโนมัติ ไม่งั้น keyboard เด้ง
   // Persist selection in URL hash
   location.hash = encodeURIComponent(target);
   // Auto-close sidebar on mobile after selecting a window
@@ -614,25 +620,79 @@ document.addEventListener('paste', (e) => {
     inputBuf = lines[lines.length - 1];
     updateInputLine();
   }
-  el('term').focus();
+  focusTerm();
 });
 
 // Key button bar — send special key directly (bypasses queue)
 function sendKey(seq) {
   if (!selectedTarget || !ws || ws.readyState !== 1) return;
   ws.send(JSON.stringify({ type: 'send', target: selectedTarget, text: seq }));
-  el('term').focus();
+  // ไม่ focusTerm() — บน mobile จะทำให้ keyboard เด้งขึ้นโดยไม่ต้องการ
 }
 
 // Clear button
 el('clearBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   clearInput();
-  el('term').focus();
+  focusTerm();
 });
 
-// Keep focus on term
-el('term').addEventListener('click', () => el('term').focus());
+// ── Mobile keyboard support ──────────────────────────────────────────────────
+const isMobile = 'ontouchstart' in window;
+
+function focusTerm() {
+  if (isMobile) el('mobileInput').focus();
+  else el('term').focus();
+}
+
+// Desktop: click term → focus div
+el('term').addEventListener('click', () => { if (!isMobile) el('term').focus(); });
+
+// Mobile: tap input line → focus hidden input → soft keyboard opens
+el('inputLine').addEventListener('touchend', (e) => {
+  e.preventDefault();
+  focusTerm();
+});
+
+// Mobile input: keydown (Enter, Backspace, Escape, Ctrl combos)
+el('mobileInput').addEventListener('keydown', (e) => {
+  if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    e.preventDefault();
+    if (!selectedTarget) return;
+    const wins = [...document.querySelectorAll('.window')].map(el => ({ target: el.dataset.target, name: el.dataset.name }));
+    const idx = wins.findIndex(w => w.target === selectedTarget);
+    if (idx < 0) return;
+    const dir = e.key === 'ArrowLeft' ? -1 : 1;
+    const next = wins[(idx + dir + wins.length) % wins.length];
+    selectWindow(next.target, next.name);
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'select', target: next.target }));
+    return;
+  }
+  if (!selectedTarget || !ws || ws.readyState !== 1) return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (inputBuf) { queueSend(inputBuf); inputBuf = ''; updateInputLine(); }
+  } else if (e.key === 'Backspace') {
+    e.preventDefault();
+    if (e.metaKey || e.ctrlKey) inputBuf = '';
+    else inputBuf = inputBuf.slice(0, -1);
+    updateInputLine();
+  } else if (e.key === 'Escape') {
+    e.preventDefault(); clearInput();
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    queueSend(inputBuf + '\t'); inputBuf = ''; updateInputLine();
+  }
+});
+
+// Mobile input: input event — captures typed characters
+el('mobileInput').addEventListener('input', () => {
+  const val = el('mobileInput').value;
+  el('mobileInput').value = '';
+  if (!val || !selectedTarget || !ws || ws.readyState !== 1) return;
+  inputBuf += val;
+  updateInputLine();
+});
 
 function showToast(msg, error = false) {
   const t = el('toast');
@@ -641,13 +701,20 @@ function showToast(msg, error = false) {
   setTimeout(() => t.className = 'toast', 1500);
 }
 
+// Event delegation on sidebar — survives innerHTML replacements
+// (per-element listeners were destroyed when renderSidebar reset innerHTML)
+document.getElementById('sidebar').addEventListener('click', (e) => {
+  const win = e.target.closest('.window');
+  if (win) selectWindow(win.dataset.target, win.dataset.name);
+});
+
 // Restore selection from URL hash
 if (location.hash) {
   const saved = decodeURIComponent(location.hash.slice(1));
   if (saved) { selectedTarget = saved; }
 }
 connect();
-setTimeout(() => el('term').focus(), 100);
+if (!isMobile) setTimeout(() => el('term').focus(), 100); // mobile: ไม่ auto-focus
 </script>
 </body>
 </html>
